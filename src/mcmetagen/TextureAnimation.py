@@ -31,7 +31,7 @@ class TextureAnimation:
 		root = Sequence.from_json("", json["animation"])
 		root.validate_references(states, sequences)
 
-		animation = root.to_animation(0, states, sequences)
+		animation = root.to_animation(0, None, states, sequences)
 		print(animation)
 
 		return TextureAnimation(states, sequences)
@@ -91,7 +91,7 @@ class Sequence:
 	entries: List[SequenceEntry]
 
 	is_weighted: bool = False
-	total_weight: int = 0
+	total_weight: Optional(int) = None
 
 	@classmethod
 	def from_json(cls, name: str, json: List[dict]) -> Sequence:
@@ -100,10 +100,13 @@ class Sequence:
 		entries = []
 		for entry_json in json:
 			entry = SequenceEntry.from_json(entry_json)
-			if entry.weight:
+			if entry.weight != None:
 				is_weighted = True
 				total_weight += entry.weight
 			entries.append(entry)
+
+		if total_weight < 1:
+			total_weight = None
 
 		return Sequence(name, entries, is_weighted, total_weight)
 
@@ -120,20 +123,40 @@ class Sequence:
 				print(f"Exception while validating sequence '{self.name}'")
 			raise e
 
-	def to_animation(self, start: int, states: Dict[str,State], sequences: Dict[str,Sequence]) -> AnimatedGroup:
+	def to_animation(self, start: int, duration: Optional(int), states: Dict[str,State], sequences: Dict[str,Sequence]) -> AnimatedGroup:
 		animatedEntries = []
+
+		if self.is_weighted:
+			if not duration:
+				raise ParsingException(f"Didn't pass duration to weighted sequence '{self.name}'")
+			fixed_duration = self.calc_fixed_duration(sequences)
+			if duration <= fixed_duration:
+				raise ParsingException(f"Duration passed to weighted sequence {self.name} is smaller than its fixed duration")
+			time_bank = WeightedTimeBank(start, duration-fixed_duration, self.total_weight)
 
 		currentTime = start
 		for entry in self.entries:
 			if entry.type == SequenceEntryType.STATE:
-				animatedState = AnimatedState(currentTime, currentTime+entry.duration, states[entry.ref].index)
+				if entry.is_weighted(sequences):
+					state_duration = time_bank.take(entry.weight)
+				else:
+					state_duration = entry.duration * entry.repeat
+
+				animatedState = AnimatedState(currentTime, currentTime+state_duration, states[entry.ref].index)
 				animatedEntries.append(animatedState)
 				currentTime += animatedState.duration
 			if entry.type == SequenceEntryType.SEQUENCE:
 				referenced_sequence = sequences[entry.ref]
-				animatedGroup = referenced_sequence.to_animation(currentTime, states, sequences)
-				animatedEntries.append(animatedGroup)
-				currentTime += animatedGroup.duration
+
+				for i in range(entry.repeat):
+					if self.is_weighted and entry.is_weighted(sequences):
+						seq_duration = time_bank.take(entry.weight)
+						animatedGroup = referenced_sequence.to_animation(currentTime, seq_duration, states, sequences)
+						animatedEntries.append(animatedGroup)
+					else:
+						animatedGroup = referenced_sequence.to_animation(currentTime, entry.duration, states, sequences)
+						animatedEntries.append(animatedGroup)
+					currentTime += animatedGroup.duration
 
 		return AnimatedGroup(start, currentTime, self.name, animatedEntries)
 
@@ -199,6 +222,15 @@ class SequenceEntry:
 			raise ParsingException(f"'{self.ref}' does not reference a state")
 		if self.type == SequenceEntryType.SEQUENCE and not self.ref in sequences:
 			raise ParsingException(f"'{self.ref}' does not reference a sequence")
+
+	def is_weighted(self, sequences: Dict[str,Sequence]) -> bool:
+		if self.type == SequenceEntryType.STATE:
+			return self.weight != None and self.weight > 0
+		elif self.type == SequenceEntryType.SEQUENCE:
+			if self.weight != None and self.weight > 0:
+				return True
+			else:
+				return sequences[self.ref].is_weighted
 
 	def calc_fixed_duration(self, sequences):
 		fixed_duration = 0
