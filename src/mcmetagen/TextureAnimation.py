@@ -22,12 +22,40 @@ class TextureAnimation:
 
 		# Validate Sequences
 		for sequence in sequences.values():
-			sequence.validate(states, sequences)
+			sequence.validate_references(states, sequences)
 
 		if not "animation" in json:
 			raise ParsingException("Texture animation is missing 'states' parameter")
 
+		root = Sequence.from_json("", json["animation"])
+		root.validate_references(states, sequences)
+
+		animation = root.to_animation(0, states, sequences)
+		print(animation)
+
 		return TextureAnimation(states, sequences)
+
+@dataclass
+class AnimatedEntry:
+	start: int
+	end: int
+
+	def __post_init__(self):
+		if self.duration <= 0:
+			raise ValueError("Duration of AnimatedEntry must at least be 1")
+
+	@property
+	def duration(self):
+		return self.end-self.start
+
+@dataclass
+class AnimatedGroup(AnimatedEntry):
+	name: str
+	entries: List(AnimatedEntry)
+
+@dataclass
+class AnimatedState(AnimatedEntry):
+	index: int
 
 @dataclass
 class State:
@@ -84,20 +112,40 @@ class Sequence:
 
 		return Sequence(name, entries, is_weighted, total_weight)
 
-	def validate(self, states: Dict[str,State], sequences: Dict[str,Sequence]):
+	def validate_references(self, states: Dict[str,State], sequences: Dict[str,Sequence]):
 		""" Checks if all references inside this sequence are valid """
 
 		try:
 			for entry in self.entries:
-				entry.validate(states, sequences)
+				entry.validate_references(states, sequences)
 		except ParsingException as e:
-			print(f"Exception while validating sequence '{self.name}'")
+			if self.name == "":
+				print(f"Exception while validating root sequence")
+			else:
+				print(f"Exception while validating sequence '{self.name}'")
 			raise e
+
+	def to_animation(self, start: int, states: Dict[str,State], sequences: Dict[str,Sequence]) -> AnimatedGroup:
+		animatedEntries = []
+
+		currentTime = start
+		for entry in self.entries:
+			if entry.type == SequenceEntryType.STATE:
+				animatedState = AnimatedState(currentTime, currentTime+entry.duration, states[entry.ref].index)
+				animatedEntries.append(animatedState)
+				currentTime += animatedState.duration
+			if entry.type == SequenceEntryType.SEQUENCE:
+				referenced_sequence = sequences[entry.ref]
+				animatedGroup = referenced_sequence.to_animation(currentTime, states, sequences)
+				animatedEntries.append(animatedGroup)
+				currentTime += animatedGroup.duration
+
+		return AnimatedGroup(start, currentTime, self.name, animatedEntries)
 
 @dataclass
 class SequenceEntry:
 	# Reference
-	type: EntryType
+	type: SequenceEntryType
 	ref: str
 
 	repeat: int = 1
@@ -110,7 +158,7 @@ class SequenceEntry:
 	def from_json(cls, json: Dict):
 		if not "type" in json:
 			raise ParsingException("Reference is missing 'type' attribute")
-		type = EntryType.from_string(json["type"])
+		type = SequenceEntryType.from_string(json["type"])
 		
 		if not "ref" in json:
 			raise ParsingException("Reference is missing 'ref' attribute")
@@ -124,23 +172,23 @@ class SequenceEntry:
 
 		return SequenceEntry(type, ref, repeat, duration, weight, start, end)
 
-	def validate(self, states: Dict[str,State], sequences: Dict[str,Sequence]):
+	def validate_references(self, states: Dict[str,State], sequences: Dict[str,Sequence]):
 		""" Checks if the reference of this entry is valid """
 
-		if self.type == EntryType.STATE and not self.ref in states:
+		if self.type == SequenceEntryType.STATE and not self.ref in states:
 			raise ParsingException(f"'{self.ref}' does not reference a state")
-		if self.type == EntryType.SEQUENCE and not self.ref in sequences:
+		if self.type == SequenceEntryType.SEQUENCE and not self.ref in sequences:
 			raise ParsingException(f"'{self.ref}' does not reference a sequence")
 
-class EntryType(Enum):
+class SequenceEntryType(Enum):
 	STATE = 1
 	SEQUENCE = 2
 
 	@classmethod
-	def from_string(cls, str: str) -> EntryType:
+	def from_string(cls, str: str) -> SequenceEntryType:
 		if str == "state":
-			return EntryType.STATE
+			return SequenceEntryType.STATE
 		elif str == "sequence":
-			return EntryType.SEQUENCE
+			return SequenceEntryType.SEQUENCE
 		else:
 			raise ValueError(f"'{str}' cannot be mapped to a reference type")
