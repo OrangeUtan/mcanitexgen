@@ -2,6 +2,7 @@ from __future__ import annotations # Replaces all type annotations with strings.
 from dataclasses import dataclass
 from typing import List, Dict, Optional
 from enum import Enum
+from mcmetagen.Exceptions import *
 
 @dataclass
 class TextureAnimation:
@@ -13,7 +14,7 @@ class TextureAnimation:
 	def from_json(cls, json: dict) -> TextureAnimation:
 		# Parse states
 		if not "states" in json:
-			raise Exception("Texture animation is missing 'states' parameter")
+			raise ParsingException("Texture animation is missing 'states' parameter")
 		states = {name:State(name, idx) for idx,name in enumerate(json["states"])}
 
 		# Parse Sequences
@@ -23,7 +24,8 @@ class TextureAnimation:
 		for sequence in sequences.values():
 			sequence.validate(states, sequences)
 
-		print(sequences)
+		if not "animation" in json:
+			raise ParsingException("Texture animation is missing 'states' parameter")
 
 		return TextureAnimation(states, sequences)
 
@@ -88,8 +90,9 @@ class Sequence:
 		try:
 			for entry in self.entries:
 				entry.validate(states, sequences)
-		except:
-			raise Exception(f"Exception while validating '{self.name}'")
+		except ParsingException as e:
+			print(f"Exception while validating sequence '{self.name}'")
+			raise e
 
 @dataclass
 class SequenceEntry:
@@ -106,11 +109,11 @@ class SequenceEntry:
 	@classmethod
 	def from_json(cls, json: Dict):
 		if not "type" in json:
-			raise Exception("Reference is missing 'type' attribute")
+			raise ParsingException("Reference is missing 'type' attribute")
 		type = EntryType.from_string(json["type"])
 		
 		if not "ref" in json:
-			raise Exception("Reference is missing 'ref' attribute")
+			raise ParsingException("Reference is missing 'ref' attribute")
 		ref = json["ref"]
 
 		repeat = json.get("repeat", 1)
@@ -125,9 +128,9 @@ class SequenceEntry:
 		""" Checks if the reference of this entry is valid """
 
 		if self.type == EntryType.STATE and not self.ref in states:
-			raise Exception(f"'{self.ref}' does not reference a state")
+			raise ParsingException(f"'{self.ref}' does not reference a state")
 		if self.type == EntryType.SEQUENCE and not self.ref in sequences:
-			raise Exception(f"'{self.ref}' does not reference a sequence")
+			raise ParsingException(f"'{self.ref}' does not reference a sequence")
 
 class EntryType(Enum):
 	STATE = 1
@@ -140,4 +143,4 @@ class EntryType(Enum):
 		elif str == "sequence":
 			return EntryType.SEQUENCE
 		else:
-			raise Exception(f"Invalid reference type '{str}'")
+			raise ValueError(f"'{str}' cannot be mapped to a reference type")
