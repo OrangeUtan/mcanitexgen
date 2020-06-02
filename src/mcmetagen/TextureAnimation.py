@@ -73,16 +73,10 @@ class State:
 	name: str
 	index: int
 
-	@classmethod
-	def from_json(cls, name: str, json: dict):
-		return State(name, json["index"])
-
 @dataclass
 class Sequence:
 	"""
 	A sequence of states and nested sequences that can be used to create an animation.
-
-	This class is used as a template to create animations.
 
 	Attributes:
 	-----------
