@@ -10,6 +10,7 @@ class TextureAnimation:
 
 	states: Dict[str,State]
 	sequences: Dict[str,Sequence]
+	animation: AnimatedGroup
 
 	@classmethod
 	def from_json(cls, json: dict) -> TextureAnimation:
@@ -26,15 +27,14 @@ class TextureAnimation:
 			sequence.validate_references(states, sequences)
 
 		if not "animation" in json:
-			raise ParsingException("Texture animation is missing 'states' parameter")
+			raise ParsingException("Texture animation is missing 'animation' parameter")
 
 		root = Sequence.from_json("", json["animation"])
 		root.validate_references(states, sequences)
 
 		animation = root.to_animation(0, None, states, sequences)
-		print(animation)
 
-		return TextureAnimation(states, sequences)
+		return TextureAnimation(states, sequences, animation)
 
 @dataclass
 class AnimatedEntry:
