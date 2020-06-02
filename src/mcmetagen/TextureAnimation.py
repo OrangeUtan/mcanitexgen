@@ -1,4 +1,5 @@
 from __future__ import annotations # Replaces all type annotations with strings. Fixes forward reference
+import math
 from dataclasses import dataclass
 from typing import List, Dict, Optional
 from enum import Enum
@@ -135,6 +136,28 @@ class Sequence:
 				currentTime += animatedGroup.duration
 
 		return AnimatedGroup(start, currentTime, self.name, animatedEntries)
+
+class WeightedTimeBank:
+	remaining_time: int
+	remaining_weight: int
+
+	def __init__(self, start:int, duration: int, total_weight: int):
+		self.remaining_time = duration
+		self.remaining_weight = total_weight
+
+	def take(self, weight: int) -> int:
+		if self.remaining_time <= 1:
+			raise Exception("Cant't take time from empty time bank")
+
+		weighted_time = round_half_up((weight*self.remaining_time)/self.remaining_weight)
+		self.remaining_time -= weighted_time
+		self.remaining_weight -= weight
+
+		return weighted_time
+
+def round_half_up(n, decimals=0):
+    multiplier = 10 ** decimals
+    return math.floor(n*multiplier + 0.5) / multiplier
 
 @dataclass
 class SequenceEntry:
