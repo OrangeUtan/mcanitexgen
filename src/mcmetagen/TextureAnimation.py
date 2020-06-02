@@ -137,6 +137,9 @@ class Sequence:
 
 		return AnimatedGroup(start, currentTime, self.name, animatedEntries)
 
+	def calc_fixed_duration(self, sequences):
+		return sum(map(lambda entry: entry.calc_fixed_duration(sequences), self.entries))
+
 class WeightedTimeBank:
 	remaining_time: int
 	remaining_weight: int
@@ -196,6 +199,18 @@ class SequenceEntry:
 			raise ParsingException(f"'{self.ref}' does not reference a state")
 		if self.type == SequenceEntryType.SEQUENCE and not self.ref in sequences:
 			raise ParsingException(f"'{self.ref}' does not reference a sequence")
+
+	def calc_fixed_duration(self, sequences):
+		fixed_duration = 0
+		if self.type == SequenceEntryType.STATE:
+			if not self.is_weighted(sequences):
+				fixed_duration = self.duration*self.repeat
+		elif self.type == SequenceEntryType.SEQUENCE:
+			# Don't calculate fixed duration of nested weighted sequences here, because durations would be calculated more than once
+			if not sequences[self.ref].is_weighted:
+				fixed_duration = sequences[self.ref].calc_fixed_duration(sequences)*self.repeat
+
+		return fixed_duration
 
 class SequenceEntryType(Enum):
 	STATE = 1
