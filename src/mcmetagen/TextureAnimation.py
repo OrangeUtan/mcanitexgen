@@ -213,6 +213,9 @@ class SequenceEntry:
 		start = json.get("start")
 		end = json.get("end")
 
+		if weight == None and duration == None:
+			duration = 1
+
 		return SequenceEntry(type, ref, repeat, duration, weight, start, end)
 
 	def validate_references(self, states: Dict[str,State], sequences: Dict[str,Sequence]):
