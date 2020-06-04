@@ -16,7 +16,7 @@ class TextureAnimation:
 	def from_json(cls, json: dict) -> TextureAnimation:
 		# Parse states
 		if not "states" in json:
-			raise ParsingException("Texture animation is missing 'states' parameter")
+			raise McMetagenException("Texture animation is missing 'states' parameter")
 		states = {name:State(name, idx) for idx,name in enumerate(json["states"])}
 
 		# Parse Sequences
@@ -27,7 +27,7 @@ class TextureAnimation:
 			sequence.validate_references(states, sequences)
 
 		if not "animation" in json:
-			raise ParsingException("Texture animation is missing 'animation' parameter")
+			raise McMetagenException("Texture animation is missing 'animation' parameter")
 
 		root = Sequence.from_json("", json["animation"])
 		root.validate_references(states, sequences)
@@ -116,7 +116,7 @@ class Sequence:
 		try:
 			for entry in self.entries:
 				entry.validate_references(states, sequences)
-		except ParsingException as e:
+		except McMetagenException as e:
 			if self.name == "":
 				print(f"Exception while validating root sequence")
 			else:
@@ -128,10 +128,10 @@ class Sequence:
 
 		if self.is_weighted:
 			if not duration:
-				raise ParsingException(f"Didn't pass duration to weighted sequence '{self.name}'")
+				raise McMetagenException(f"Didn't pass duration to weighted sequence '{self.name}'")
 			fixed_duration = self.calc_fixed_duration(sequences)
 			if duration <= fixed_duration:
-				raise ParsingException(f"Duration passed to weighted sequence {self.name} is smaller than its fixed duration")
+				raise McMetagenException(f"Duration passed to weighted sequence {self.name} is smaller than its fixed duration")
 			time_bank = WeightedTimeBank(start, duration-fixed_duration, self.total_weight)
 
 		currentTime = start
@@ -200,11 +200,11 @@ class SequenceEntry:
 	@classmethod
 	def from_json(cls, json: Dict):
 		if not "type" in json:
-			raise ParsingException("Reference is missing 'type' attribute")
+			raise McMetagenException("Reference is missing 'type' attribute")
 		type = SequenceEntryType.from_string(json["type"])
 		
 		if not "ref" in json:
-			raise ParsingException("Reference is missing 'ref' attribute")
+			raise McMetagenException("Reference is missing 'ref' attribute")
 		ref = json["ref"]
 
 		repeat = json.get("repeat", 1)
@@ -222,9 +222,9 @@ class SequenceEntry:
 		""" Checks if the reference of this entry is valid """
 
 		if self.type == SequenceEntryType.STATE and not self.ref in states:
-			raise ParsingException(f"'{self.ref}' does not reference a state")
+			raise McMetagenException(f"'{self.ref}' does not reference a state")
 		if self.type == SequenceEntryType.SEQUENCE and not self.ref in sequences:
-			raise ParsingException(f"'{self.ref}' does not reference a sequence")
+			raise McMetagenException(f"'{self.ref}' does not reference a sequence")
 
 	def is_weighted(self, sequences: Dict[str,Sequence]) -> bool:
 		if self.type == SequenceEntryType.STATE:

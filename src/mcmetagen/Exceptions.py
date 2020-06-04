@@ -1,2 +1,2 @@
-class ParsingException(Exception):
+class McMetagenException(Exception):
 	pass
