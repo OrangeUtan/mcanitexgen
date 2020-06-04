@@ -153,7 +153,12 @@ class Sequence:
 
 		animatedEntries = []
 		currentTime = start
-		for entry, entry_duration in zip(self.entries, entry_durations):
+		for i, (entry, entry_duration) in enumerate(zip(self.entries, entry_durations)):
+			if entry.end:
+				if currentTime >= entry.end:
+					raise McMetagenException(f"Sequence '{self.name}': {i+1}. entry can't end at '{entry.end}', because of previous entry")
+				entry_duration = entry.end - currentTime
+
 			if entry.has_weight:
 				part_durations = distribute_duration(entry_duration, entry.weight*entry.repeat, [entry for i in range(entry.repeat)])
 			else:
@@ -161,7 +166,7 @@ class Sequence:
 
 			for part_duration in part_durations:
 				if part_duration <= 0:
-					raise McMetagenException(f"Duration of '{duration}' exhausted while trying to distribute it over entries in weighted sequence '{self.name}'")
+					raise McMetagenException(f"Sequence '{self.name}': Duration of '{duration}' exhausted while trying to distribute it over entries")
 
 				animatedEntry = entry.to_animated_entry(currentTime, part_duration, textureAnimation)
 				animatedEntries.append(animatedEntry)
