@@ -114,9 +114,7 @@ class Sequence:
 		for entry_json in json:
 			entry = SequenceEntry.from_json(entry_json)
 			entry.validate_reference(name, state_names, sequence_names)
-
-			if entry.weight != None:
-				total_weight += entry.weight
+			total_weight += entry.weight
 			entries.append(entry)
 
 		return Sequence(name, entries, total_weight)
@@ -135,7 +133,7 @@ class Sequence:
 		currentTime = start
 		for entry in self.entries:
 			if entry.type == SequenceEntryType.STATE:
-				if entry.is_weighted(sequences):
+				if entry.has_weight:
 					state_duration = time_bank.take(entry.weight)
 				else:
 					state_duration = entry.duration * entry.repeat
@@ -147,7 +145,7 @@ class Sequence:
 				referenced_sequence = sequences[entry.ref]
 
 				for i in range(entry.repeat):
-					if self.is_weighted and entry.is_weighted(sequences):
+					if self.is_weighted and entry.is_weighted:
 						seq_duration = time_bank.take(entry.weight)
 						animatedGroup = referenced_sequence.to_animation(currentTime, seq_duration, states, sequences)
 						animatedEntries.append(animatedGroup)
@@ -191,9 +189,14 @@ class SequenceEntry:
 
 	repeat: int = 1
 	duration: Optional(int) = None
-	weight: Optional(int) = None
+	weight: int = 0
 	start: Optional(str) = None
 	end: Optional(str) = None
+
+	@property
+	def has_weight(self) -> bool:
+		""" Has the entry any weight to it and should be considered when distributing weighted duration """
+		return self.weight > 0
 
 	@classmethod
 	def from_json(cls, json: Dict):
@@ -207,13 +210,10 @@ class SequenceEntry:
 			raise McMetagenException("Sequence entry is missing reference to state or sequence")
 
 		repeat = json.get("repeat", 1)
-		duration = json.get("duration")
-		weight = json.get("weight")
+		duration = json.get("duration", 1)
+		weight = json.get("weight", 0)
 		start = json.get("start")
 		end = json.get("end")
-
-		if weight == None and duration == None:
-			duration = 1
 
 		return SequenceEntry(type, ref, repeat, duration, weight, start, end)
 
@@ -225,19 +225,10 @@ class SequenceEntry:
 		if self.type == SequenceEntryType.SEQUENCE and not self.ref in sequence_names:
 			raise InvalidReferenceException(parent_sequence, self.ref, self.type)
 
-	def is_weighted(self, sequences: Dict[str,Sequence]) -> bool:
-		if self.type == SequenceEntryType.STATE:
-			return self.weight != None and self.weight > 0
-		elif self.type == SequenceEntryType.SEQUENCE:
-			if self.weight != None and self.weight > 0:
-				return True
-			else:
-				return sequences[self.ref].is_weighted
-
 	def calc_fixed_duration(self, sequences):
 		fixed_duration = 0
 		if self.type == SequenceEntryType.STATE:
-			if not self.is_weighted(sequences):
+			if not self.has_weight:
 				fixed_duration = self.duration*self.repeat
 		elif self.type == SequenceEntryType.SEQUENCE:
 			# Don't calculate fixed duration of nested weighted sequences here, because durations would be calculated more than once

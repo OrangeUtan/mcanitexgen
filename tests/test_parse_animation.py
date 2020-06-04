@@ -200,26 +200,53 @@ def test_sequences():
 		McMetagenException, "Duration '1' is not enough"
 	)
 
-	
-# def test_pass_duration_to_mixed_sequence():
-# 	# Pass duration to mixed sequence
-# 	assert_animation(
-# 		{
-# 			"states": ["a","b","c"],
-# 			"sequences": {
-# 				"seq_a": [
-# 					{ "type": "state", "ref": "a", "weight": 1 },
-# 					{ "type": "state", "ref": "b", "duration": 10 }
-# 				]
-# 			},
-# 			"animation": [
-# 				{ "type": "sequence", "ref": "seq_a", "duration": 11 } # <-- duration 1 not enough for weighted 2 entries
-# 			]
-# 		},
-# 		AnimatedGroup(0,11,"", [
-# 			AnimatedGroup(0,11,"seq_a",[
-# 				AnimatedState(0,1,0),
-# 				AnimatedState(1,11,1)
-# 			])
-# 		])
-# 	)
+
+def test_weighted_sequence():
+	assert_animation(
+		{
+			"states": ["a","b","c"],
+			"sequences": {
+				"seq_a": [
+					{ "state": "b", "weight": 1 },
+					{ "state": "a", "weight": 1 },
+					{ "state": "b", "weight": 3 }
+				]
+			},
+			"animation": [
+				{ "sequence": "seq_a", "duration": 123 }
+			]
+		},
+		AnimatedGroup(0,123,"", [
+			AnimatedGroup(0,123,"seq_a", [
+				AnimatedState(0,25,1),
+				AnimatedState(25,50,0),
+				AnimatedState(50,123,1)	
+			])
+		])
+	)
+
+	# Mixed sequence
+	assert_animation(
+		{
+			"states": ["a","b","c"],
+			"sequences": {
+				"seq_a": [
+					{ "state": "a", "duration": 5 },
+					{ "state": "b", "weight": 1 },
+					{ "state": "a", "duration": 5 },
+					{ "state": "b", "weight": 3 }
+				]
+			},
+			"animation": [
+				{ "sequence": "seq_a", "duration": 123 }
+			]
+		},
+		AnimatedGroup(0,123,"", [
+			AnimatedGroup(0,123,"seq_a", [
+				AnimatedState(0,5,0),
+				AnimatedState(5,33,1),
+				AnimatedState(33,38,0),
+				AnimatedState(38,123,1)
+			])
+		])
+	)
