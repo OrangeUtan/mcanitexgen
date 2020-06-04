@@ -27,7 +27,7 @@ def test_references():
 		{
 			"states": [],
 			"animation": [
-				{ "type": "state", "ref": "a" }
+				{ "state": "a" }
 			]
 		},
 		InvalidReferenceException, str(InvalidReferenceException('', 'a', SequenceEntryType.STATE))
@@ -36,7 +36,7 @@ def test_references():
 		{
 			"states": ["a","b","c"],
 			"animation": [
-				{ "type": "state", "ref": "d" }
+				{ "state": "d" }
 			]
 		},
 		InvalidReferenceException, str(InvalidReferenceException('', 'd', SequenceEntryType.STATE))
@@ -48,11 +48,11 @@ def test_references():
 			"states": ["a","b","c"],
 			"sequences": {
 				"seq_a": [
-					{ "type": "state", "ref": "d" }
+					{ "state": "d" }
 				]
 			},
 			"animation": [
-				{ "type": "sequence", "ref": "seq_a" }
+				{ "sequence": "seq_a" }
 			]
 		},
 		InvalidReferenceException, str(InvalidReferenceException('seq_a', 'd', SequenceEntryType.STATE))
@@ -63,7 +63,7 @@ def test_references():
 		{
 			"states": ["a","b","c"],
 			"animation": [
-				{ "type": "sequence", "ref": "seq_a" }
+				{ "sequence": "seq_a" }
 			]
 		},
 		InvalidReferenceException, str(InvalidReferenceException('', 'seq_a', SequenceEntryType.SEQUENCE))
@@ -73,11 +73,11 @@ def test_references():
 			"states": ["a","b","c"],
 			"sequences": {
 				"seq_a": [
-					{ "type": "state", "ref": "a" }
+					{ "state": "a" }
 				]
 			},
 			"animation": [
-				{ "type": "sequence", "ref": "seq_b" }
+				{ "sequence": "seq_b" }
 			]
 		},
 		InvalidReferenceException, str(InvalidReferenceException('', 'seq_b', SequenceEntryType.SEQUENCE))
@@ -89,11 +89,11 @@ def test_references():
 			"states": ["a","b","c"],
 			"sequences": {
 				"seq_a": [
-					{ "type": "sequence", "ref": "seq_b" }
+					{ "sequence": "seq_b" }
 				]
 			},
 			"animation": [
-				{ "type": "sequence", "ref": "seq_a" }
+				{ "sequence": "seq_a" }
 			]
 		},
 		InvalidReferenceException, str(InvalidReferenceException('seq_a', 'seq_b', SequenceEntryType.SEQUENCE))
@@ -105,7 +105,7 @@ def test_states():
 		{
 			"states": ["a","b","c"],
 			"animation": [
-				{ "type": "state", "ref": "a" }
+				{ "state": "a" }
 			]
 		}, 
 		{ "a": State("a", 0), "b": State("b", 1), "c": State("c", 2) }
@@ -117,12 +117,12 @@ def test_states():
 			"states": ["a","b","c"],
 			"sequences": {
 				"seq_a": [
-					{ "type": "state", "ref": "b", "duration": 5 } # <-- duration in nested
+					{ "state": "b", "duration": 5 } # <-- duration in nested
 				]
 			},
 			"animation": [
-				{ "type": "state", "ref": "c", "duration": 5 }, # <-- duration in root
-				{ "type": "sequence", "ref": "seq_a" }
+				{ "state": "c", "duration": 5 }, # <-- duration in root
+				{ "sequence": "seq_a" }
 			]
 		}, 
 		AnimatedGroup(0,10,"", [
@@ -139,12 +139,12 @@ def test_states():
 			"states": ["a","b","c"],
 			"sequences": {
 				"seq_a": [
-					{ "type": "state", "ref": "b" } # <-- no duration in nested
+					{ "state": "b" } # <-- no duration in nested
 				]
 			},
 			"animation": [
-				{ "type": "state", "ref": "c" }, # <-- no duration in root
-				{ "type": "sequence", "ref": "seq_a" }
+				{ "state": "c" }, # <-- no duration in root
+				{ "sequence": "seq_a" }
 			]
 		}, 
 		AnimatedGroup(0,2,"", [
@@ -162,15 +162,15 @@ def test_sequences():
 			"states": ["a","b","c"],
 			"sequences": {
 				"seq_a": [
-					{ "type": "state", "ref": "a", "duration": 10 },
-					{ "type": "sequence", "ref": "seq_b" }
+					{ "state": "a", "duration": 10 },
+					{ "sequence": "seq_b" }
 				],
 				"seq_b": [
-					{ "type": "state", "ref": "b", "duration": 10 }
+					{ "state": "b", "duration": 10 }
 				]
 			},
 			"animation": [
-				{ "type": "sequence", "ref": "seq_a" } # <-- no duration passed
+				{ "sequence": "seq_a" } # <-- no duration passed
 			]
 		},
 		AnimatedGroup(0,20,"",[
@@ -189,12 +189,12 @@ def test_sequences():
 			"states": ["a","b","c"],
 			"sequences": {
 				"seq_a": [
-					{ "type": "state", "ref": "a", "weight": 1 },
-					{ "type": "state", "ref": "b", "weight": 1 }
+					{ "state": "a", "weight": 1 },
+					{ "state": "b", "weight": 1 }
 				]
 			},
 			"animation": [
-				{ "type": "sequence", "ref": "seq_a" } # <-- duration 1 not enough for weighted 2 entries
+				{ "sequence": "seq_a" } # <-- duration 1 not enough for weighted 2 entries
 			]
 		},
 		McMetagenException, "Duration '1' is not enough"

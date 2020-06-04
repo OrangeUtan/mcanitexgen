@@ -185,13 +185,14 @@ class SequenceEntry:
 
 	@classmethod
 	def from_json(cls, json: Dict):
-		if not "type" in json:
-			raise McMetagenException("Reference is missing 'type' attribute")
-		type = SequenceEntryType.from_string(json["type"])
-		
-		if not "ref" in json:
-			raise McMetagenException("Reference is missing 'ref' attribute")
-		ref = json["ref"]
+		if "sequence" in json:
+			type = SequenceEntryType.SEQUENCE
+			ref = json["sequence"]
+		elif "state" in json:
+			type = SequenceEntryType.STATE
+			ref = json["state"]
+		else:
+			raise McMetagenException("Sequence entry is missing reference to state or sequence")
 
 		repeat = json.get("repeat", 1)
 		duration = json.get("duration")
