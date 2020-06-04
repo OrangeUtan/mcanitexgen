@@ -40,7 +40,10 @@ class AnimatedEntry:
 	start: int
 	end: int
 
-	def __post_init__(self):
+	def __init__(self, start:int, end:int):
+		self.start = int(start)
+		self.end = int(end)
+
 		if self.duration <= 0:
 			raise ValueError("Duration of AnimatedEntry must at least be 1")
 
@@ -53,9 +56,18 @@ class AnimatedGroup(AnimatedEntry):
 	name: str
 	entries: List(AnimatedEntry)
 
+	def __init__(self, start:int, end:int, name:str, entries:List[AnimatedEntry]):
+		super(AnimatedGroup, self).__init__(start,end)
+		self.name = name
+		self.entries = entries
+
 @dataclass
 class AnimatedState(AnimatedEntry):
 	index: int
+
+	def __init__(self, start:int, end:int, index:int):
+		super(AnimatedState, self).__init__(start,end)
+		self.index = index
 
 @dataclass
 class State:
@@ -205,12 +217,12 @@ class SequenceEntry:
 
 		return SequenceEntry(type, ref, repeat, duration, weight, start, end)
 
-	def validate_reference(self, parent_sequence: str, states_names: List[str], sequences_names: List[str]):
+	def validate_reference(self, parent_sequence: str, state_names: List[str], sequence_names: List[str]):
 		""" Checks if the reference of this entry is valid """
 
-		if self.type == SequenceEntryType.STATE and not self.ref in states_names:
+		if self.type == SequenceEntryType.STATE and not self.ref in state_names:
 			raise InvalidReferenceException(parent_sequence, self.ref, self.type)
-		if self.type == SequenceEntryType.SEQUENCE and not self.ref in sequences_names:
+		if self.type == SequenceEntryType.SEQUENCE and not self.ref in sequence_names:
 			raise InvalidReferenceException(parent_sequence, self.ref, self.type)
 
 	def is_weighted(self, sequences: Dict[str,Sequence]) -> bool:
