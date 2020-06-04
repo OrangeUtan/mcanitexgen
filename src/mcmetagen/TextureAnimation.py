@@ -20,17 +20,16 @@ class TextureAnimation:
 		states = {name:State(name, idx) for idx,name in enumerate(json["states"])}
 
 		# Parse Sequences
-		sequences = {name:Sequence.from_json(name, entries) for name,entries in json.get("sequences", {}).items()}
-
-		# Validate Sequences
-		for sequence in sequences.values():
-			sequence.validate_references(states, sequences)
+		sequences = dict()
+		sequence_names = json.get("sequences", {}).keys()
+		for name,entries in json.get("sequences", {}).items():
+			sequence = Sequence.from_json(name, entries, states.keys(), sequence_names)
+			sequences[name] = sequence
 
 		if not "animation" in json:
 			raise McMetagenException("Texture animation is missing 'animation' parameter")
 
-		root = Sequence.from_json("", json["animation"])
-		root.validate_references(states, sequences)
+		root = Sequence.from_json("", json["animation"], states.keys(), sequence_names)
 
 		animation = root.to_animation(0, None, states, sequences)
 
@@ -94,12 +93,14 @@ class Sequence:
 	total_weight: Optional(int) = None
 
 	@classmethod
-	def from_json(cls, name: str, json: List[dict]) -> Sequence:
+	def from_json(cls, name: str, json: List[dict], state_names: List[str], sequence_names: List[str]) -> Sequence:
 		total_weight = 0
 		is_weighted = False
 		entries = []
 		for entry_json in json:
 			entry = SequenceEntry.from_json(entry_json)
+			entry.validate_reference(name, state_names, sequence_names)
+
 			if entry.weight != None:
 				is_weighted = True
 				total_weight += entry.weight
@@ -109,19 +110,6 @@ class Sequence:
 			total_weight = None
 
 		return Sequence(name, entries, is_weighted, total_weight)
-
-	def validate_references(self, states: Dict[str,State], sequences: Dict[str,Sequence]):
-		""" Checks if all references inside this sequence are valid """
-
-		try:
-			for entry in self.entries:
-				entry.validate_references(states, sequences)
-		except McMetagenException as e:
-			if self.name == "":
-				print(f"Exception while validating root sequence")
-			else:
-				print(f"Exception while validating sequence '{self.name}'")
-			raise e
 
 	def to_animation(self, start: int, duration: Optional(int), states: Dict[str,State], sequences: Dict[str,Sequence]) -> AnimatedGroup:
 		animatedEntries = []
@@ -218,13 +206,13 @@ class SequenceEntry:
 
 		return SequenceEntry(type, ref, repeat, duration, weight, start, end)
 
-	def validate_references(self, states: Dict[str,State], sequences: Dict[str,Sequence]):
+	def validate_reference(self, parent_sequence: str, states_names: List[str], sequences_names: List[str]):
 		""" Checks if the reference of this entry is valid """
 
-		if self.type == SequenceEntryType.STATE and not self.ref in states:
-			raise McMetagenException(f"'{self.ref}' does not reference a state")
-		if self.type == SequenceEntryType.SEQUENCE and not self.ref in sequences:
-			raise McMetagenException(f"'{self.ref}' does not reference a sequence")
+		if self.type == SequenceEntryType.STATE and not self.ref in states_names:
+			raise McMetagenException(f"Reference '{self.ref}' in sequence '{parent_sequence}' does not name a state")
+		if self.type == SequenceEntryType.SEQUENCE and not self.ref in sequences_names:
+			raise McMetagenException(f"Reference '{self.ref}' in sequence '{parent_sequence}' does not reference a sequence")
 
 	def is_weighted(self, sequences: Dict[str,Sequence]) -> bool:
 		if self.type == SequenceEntryType.STATE:
