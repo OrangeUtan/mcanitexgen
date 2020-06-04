@@ -9,9 +9,16 @@ from mcmetagen.Exceptions import *
 @dataclass
 class TextureAnimation:
 
+	root_sequence: Sequence
 	states: Dict[str,State]
 	sequences: Dict[str,Sequence]
 	animation: AnimatedGroup
+
+	def __init__(self, root_sequence:Sequence, states: Dict[str,State], sequences: Dict[str,Sequence]):
+		self.states = states
+		self.sequences = sequences
+		self.root_sequence = root_sequence
+		self.animation = root_sequence.to_animation(0, None, self)
 
 	@classmethod
 	def from_json(cls, json: dict) -> TextureAnimation:
@@ -37,9 +44,7 @@ class TextureAnimation:
 		root = Sequence.from_json("", json["animation"], states.keys(), sequence_names)
 		root.post_init(sequences)
 
-		animation = root.to_animation(0, None, states, sequences)
-
-		return TextureAnimation(states, sequences, animation)
+		return TextureAnimation(root, states, sequences)
 
 @dataclass
 class AnimatedEntry:
@@ -135,7 +140,7 @@ class Sequence:
 	def is_weighted(self) -> bool:
 		return self.total_weight > 0
 
-	def to_animation(self, start: int, duration: Optional(int), states: Dict[str,State], sequences: Dict[str,Sequence]) -> AnimatedGroup:
+	def to_animation(self, start: int, duration: Optional(int), textureAnimation: TextureAnimation) -> AnimatedGroup:
 
 		if self.is_weighted:
 			if not duration:
@@ -158,7 +163,7 @@ class Sequence:
 				if part_duration <= 0:
 					raise McMetagenException(f"Duration of '{duration}' exhausted while trying to distribute it over entries in weighted sequence '{self.name}'")
 
-				animatedEntry = entry.to_animated_entry(currentTime, part_duration, states, sequences)
+				animatedEntry = entry.to_animated_entry(currentTime, part_duration, textureAnimation)
 				animatedEntries.append(animatedEntry)
 				currentTime += animatedEntry.duration
 
@@ -218,11 +223,11 @@ class SequenceEntry:
 
 		return SequenceEntry(type, ref, repeat, duration, weight, start, end)
 
-	def to_animated_entry(self, start:int, duration:int, states: Dict[str,State], sequences: Dict[str,Sequence]) -> AnimatedEntry:
+	def to_animated_entry(self, start:int, duration:int, textureAnimation: TextureAnimation) -> AnimatedEntry:
 		if self.type == SequenceEntryType.STATE:
-			return AnimatedState(start, start+duration, states[self.ref].index)
+			return AnimatedState(start, start+duration, textureAnimation.states[self.ref].index)
 		else:
-			return sequences[self.ref].to_animation(start, duration, states, sequences)
+			return textureAnimation.sequences[self.ref].to_animation(start, duration, textureAnimation)
 
 	def validate_reference(self, parent_sequence: str, state_names: List[str], sequence_names: List[str]):
 		""" Checks if the reference of this entry is valid """
