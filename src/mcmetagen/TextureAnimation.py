@@ -19,9 +19,9 @@ class TextureAnimation:
 			raise McMetagenException("Texture animation is missing 'states' parameter")
 		states = {name:State(name, idx) for idx,name in enumerate(json["states"])}
 
-		# Parse Sequences
-		sequences = dict()
+		# Parse sequences
 		sequence_names = json.get("sequences", {}).keys()
+		sequences = dict()
 		for name,entries in json.get("sequences", {}).items():
 			sequence = Sequence.from_json(name, entries, states.keys(), sequence_names)
 			sequences[name] = sequence
@@ -89,27 +89,25 @@ class Sequence:
 	name: str
 	entries: List[SequenceEntry]
 
-	is_weighted: bool = False
-	total_weight: Optional(int) = None
+	total_weight: int
+
+	@property
+	def is_weighted(self):
+		return self.total_weight > 0
 
 	@classmethod
 	def from_json(cls, name: str, json: List[dict], state_names: List[str], sequence_names: List[str]) -> Sequence:
 		total_weight = 0
-		is_weighted = False
 		entries = []
 		for entry_json in json:
 			entry = SequenceEntry.from_json(entry_json)
 			entry.validate_reference(name, state_names, sequence_names)
 
 			if entry.weight != None:
-				is_weighted = True
 				total_weight += entry.weight
 			entries.append(entry)
 
-		if total_weight < 1:
-			total_weight = None
-
-		return Sequence(name, entries, is_weighted, total_weight)
+		return Sequence(name, entries, total_weight)
 
 	def to_animation(self, start: int, duration: Optional(int), states: Dict[str,State], sequences: Dict[str,Sequence]) -> AnimatedGroup:
 		animatedEntries = []
