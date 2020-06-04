@@ -210,9 +210,9 @@ class SequenceEntry:
 		""" Checks if the reference of this entry is valid """
 
 		if self.type == SequenceEntryType.STATE and not self.ref in states_names:
-			raise McMetagenException(f"Reference '{self.ref}' in sequence '{parent_sequence}' does not name a state")
+			raise InvalidReferenceException(parent_sequence, self.ref, self.type)
 		if self.type == SequenceEntryType.SEQUENCE and not self.ref in sequences_names:
-			raise McMetagenException(f"Reference '{self.ref}' in sequence '{parent_sequence}' does not reference a sequence")
+			raise InvalidReferenceException(parent_sequence, self.ref, self.type)
 
 	def is_weighted(self, sequences: Dict[str,Sequence]) -> bool:
 		if self.type == SequenceEntryType.STATE:
@@ -247,3 +247,10 @@ class SequenceEntryType(Enum):
 			return SequenceEntryType.SEQUENCE
 		else:
 			raise ValueError(f"'{str}' cannot be mapped to a reference type")
+
+class InvalidReferenceException(McMetagenException):
+	def __init__(self, parent_sequence: str, ref_target: str, ref_type: SequenceEntryType):
+		if ref_type == SequenceEntryType.STATE:
+			super(InvalidReferenceException, self).__init__(f"Reference '{ref_target}' in sequence '{parent_sequence}' does not name a state")
+		elif ref_type == SequenceEntryType.SEQUENCE:
+			super(InvalidReferenceException, self).__init__(f"Reference '{ref_target}' in sequence '{parent_sequence}' does not name a sequence")
