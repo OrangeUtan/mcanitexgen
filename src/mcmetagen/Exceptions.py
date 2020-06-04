@@ -1,0 +1,2 @@
+class McMetagenException(Exception):
+	pass
