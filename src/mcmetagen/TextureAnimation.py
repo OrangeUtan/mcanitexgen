@@ -3,6 +3,7 @@ import math
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 from enum import Enum
+import itertools
 from mcmetagen.Exceptions import *
 
 @dataclass
@@ -135,58 +136,47 @@ class Sequence:
 		return self.total_weight > 0
 
 	def to_animation(self, start: int, duration: Optional(int), states: Dict[str,State], sequences: Dict[str,Sequence]) -> AnimatedGroup:
-		animatedEntries = []
 
 		if self.is_weighted:
 			if not duration:
 				raise McMetagenException(f"Didn't pass duration to weighted sequence '{self.name}'")
 			if duration <= self.fixed_duration:
-				raise McMetagenException(f"Duration passed to weighted sequence {self.name} is smaller than its fixed duration")
-			time_bank = WeightedTimeBank(start, duration-self.fixed_duration, self.total_weight)
+				raise McMetagenException(f"Duration '{duration}' passed to sequence '{self.name}' is smaller than its fixed duration")
+			entry_durations = distribute_duration(duration-self.fixed_duration, self.total_weight, self.entries)
+		else:
+			entry_durations = map(lambda entry: entry.duration, self.entries)
 
+		animatedEntries = []
 		currentTime = start
-		for entry in self.entries:
-			if entry.type == SequenceEntryType.STATE:
-				if entry.has_weight:
-					state_duration = time_bank.take(entry.weight)
-				else:
-					state_duration = entry.duration * entry.repeat
+		for entry, entry_duration in zip(self.entries, entry_durations):
+			if entry.has_weight:
+				part_durations = distribute_duration(entry_duration, entry.weight*entry.repeat, [entry for i in range(entry.repeat)])
+			else:
+				part_durations = itertools.repeat(entry_duration, entry.repeat)
 
-				animatedState = AnimatedState(currentTime, currentTime+state_duration, states[entry.ref].index)
-				animatedEntries.append(animatedState)
-				currentTime += animatedState.duration
-			if entry.type == SequenceEntryType.SEQUENCE:
-				referenced_sequence = sequences[entry.ref]
+			for part_duration in part_durations:
+				if part_duration <= 0:
+					raise McMetagenException(f"Duration of '{duration}' exhausted while trying to distribute it over entries in weighted sequence '{self.name}'")
 
-				for i in range(entry.repeat):
-					if self.is_weighted and entry.is_weighted:
-						seq_duration = time_bank.take(entry.weight)
-						animatedGroup = referenced_sequence.to_animation(currentTime, seq_duration, states, sequences)
-						animatedEntries.append(animatedGroup)
-					else:
-						animatedGroup = referenced_sequence.to_animation(currentTime, entry.duration, states, sequences)
-						animatedEntries.append(animatedGroup)
-					currentTime += animatedGroup.duration
+				animatedEntry = entry.to_animated_entry(currentTime, part_duration, states, sequences)
+				animatedEntries.append(animatedEntry)
+				currentTime += animatedEntry.duration
 
 		return AnimatedGroup(start, currentTime, self.name, animatedEntries)
 
-class WeightedTimeBank:
-	remaining_time: int
-	remaining_weight: int
+def distribute_duration(duration:int, total_weight:int, entries: List[SequenceEntry]):
+	""" Distributes a duration over a collection of weighted SequenceEntries """
 
-	def __init__(self, start:int, duration: int, total_weight: int):
-		self.remaining_time = duration
-		self.remaining_weight = total_weight
-
-	def take(self, weight: int) -> int:
-		if self.remaining_time <= 1:
-			raise Exception("Cant't take time from empty time bank")
-
-		weighted_time = round_half_up((weight*self.remaining_time)/self.remaining_weight)
-		self.remaining_time -= weighted_time
-		self.remaining_weight -= weight
-
-		return weighted_time
+	remaining_duration = duration
+	remaining_weight = total_weight
+	for entry in entries:
+		if entry.has_weight:
+			weighted_duration = round_half_up((entry.weight*remaining_duration)/remaining_weight)
+			remaining_duration -= weighted_duration
+			remaining_weight -= entry.weight
+			yield weighted_duration
+		else:
+			yield entry.duration
 
 def round_half_up(num, decimals:int = 0) -> int:
     multiplier = 10 ** decimals
@@ -227,6 +217,12 @@ class SequenceEntry:
 		end = json.get("end")
 
 		return SequenceEntry(type, ref, repeat, duration, weight, start, end)
+
+	def to_animated_entry(self, start:int, duration:int, states: Dict[str,State], sequences: Dict[str,Sequence]) -> AnimatedEntry:
+		if self.type == SequenceEntryType.STATE:
+			return AnimatedState(start, start+duration, states[self.ref].index)
+		else:
+			return sequences[self.ref].to_animation(start, duration, states, sequences)
 
 	def validate_reference(self, parent_sequence: str, state_names: List[str], sequence_names: List[str]):
 		""" Checks if the reference of this entry is valid """

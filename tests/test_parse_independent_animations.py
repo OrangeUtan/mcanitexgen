@@ -247,5 +247,23 @@ def test_weighted_sequences():
 				{ "sequence": "seq_a" } # <-- duration 1 not enough for weighted 2 entries
 			]
 		},
-		McMetagenException, "Duration '1' is not enough"
+		McMetagenException, "Duration of '1' exhausted"
+	)
+	assert_exception(
+		{
+			"states": ["a","b","c"],
+			"sequences": {
+				"seq_a": [
+					{ "sequence": "seq_b", "weight": 1 },
+					{ "sequence": "seq_b", "weight": 1 }
+				],
+				"seq_b": [
+					{ "state": "b", "duration": 10 }
+				]
+			},
+			"animation": [
+				{ "sequence": "seq_a" } # <-- duration 1 not enough for weighted 2 entries
+			]
+		},
+		McMetagenException, "Duration '1' passed to sequence 'seq_a' is smaller"
 	)
