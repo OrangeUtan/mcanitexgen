@@ -1,6 +1,6 @@
 from __future__ import annotations # Replaces all type annotations with strings. Fixes forward reference
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 from enum import Enum
 from mcmetagen.Exceptions import *
@@ -26,10 +26,15 @@ class TextureAnimation:
 			sequence = Sequence.from_json(name, entries, states.keys(), sequence_names)
 			sequences[name] = sequence
 
+		# Post init sequences
+		for sequence in sequences.values():
+			sequence.post_init(sequences)
+
 		if not "animation" in json:
 			raise McMetagenException("Texture animation is missing 'animation' parameter")
 
 		root = Sequence.from_json("", json["animation"], states.keys(), sequence_names)
+		root.post_init(sequences)
 
 		animation = root.to_animation(0, None, states, sequences)
 
@@ -102,10 +107,7 @@ class Sequence:
 	entries: List[SequenceEntry]
 
 	total_weight: int
-
-	@property
-	def is_weighted(self):
-		return self.total_weight > 0
+	fixed_duration: int = field(default=None,init=False) # Duration of the sequence unaffected by weight. Can be thought of as a 'minimum' duration
 
 	@classmethod
 	def from_json(cls, name: str, json: List[dict], state_names: List[str], sequence_names: List[str]) -> Sequence:
@@ -117,7 +119,20 @@ class Sequence:
 			total_weight += entry.weight
 			entries.append(entry)
 
-		return Sequence(name, entries, total_weight)
+		return Sequence(name, entries, total_weight)		
+
+	def post_init(self, sequences: Dict[str,Sequence]):
+		""" Executes logic dependent on data that only exists after initialisation of the sequence """
+		self.fixed_duration = self.calc_fixed_duration(sequences)
+
+	def calc_fixed_duration(self, sequences: Dict[str,Sequence]) -> int:
+		if not self.fixed_duration:
+			self.fixed_duration = sum(map(lambda entry: entry.calc_fixed_duration(sequences), self.entries))
+		return self.fixed_duration
+
+	@property
+	def is_weighted(self) -> bool:
+		return self.total_weight > 0
 
 	def to_animation(self, start: int, duration: Optional(int), states: Dict[str,State], sequences: Dict[str,Sequence]) -> AnimatedGroup:
 		animatedEntries = []
@@ -125,10 +140,9 @@ class Sequence:
 		if self.is_weighted:
 			if not duration:
 				raise McMetagenException(f"Didn't pass duration to weighted sequence '{self.name}'")
-			fixed_duration = self.calc_fixed_duration(sequences)
-			if duration <= fixed_duration:
+			if duration <= self.fixed_duration:
 				raise McMetagenException(f"Duration passed to weighted sequence {self.name} is smaller than its fixed duration")
-			time_bank = WeightedTimeBank(start, duration-fixed_duration, self.total_weight)
+			time_bank = WeightedTimeBank(start, duration-self.fixed_duration, self.total_weight)
 
 		currentTime = start
 		for entry in self.entries:
@@ -156,9 +170,6 @@ class Sequence:
 
 		return AnimatedGroup(start, currentTime, self.name, animatedEntries)
 
-	def calc_fixed_duration(self, sequences):
-		return sum(map(lambda entry: entry.calc_fixed_duration(sequences), self.entries))
-
 class WeightedTimeBank:
 	remaining_time: int
 	remaining_weight: int
@@ -177,9 +188,9 @@ class WeightedTimeBank:
 
 		return weighted_time
 
-def round_half_up(n, decimals=0):
+def round_half_up(num, decimals:int = 0) -> int:
     multiplier = 10 ** decimals
-    return math.floor(n*multiplier + 0.5) / multiplier
+    return math.floor(num*multiplier + 0.5) / multiplier
 
 @dataclass
 class SequenceEntry:
@@ -199,7 +210,7 @@ class SequenceEntry:
 		return self.weight > 0
 
 	@classmethod
-	def from_json(cls, json: Dict):
+	def from_json(cls, json: Dict) -> SequenceEntry:
 		if str(SequenceEntryType.SEQUENCE) in json:
 			type = SequenceEntryType.SEQUENCE
 			ref = json[str(SequenceEntryType.SEQUENCE)]
@@ -225,7 +236,7 @@ class SequenceEntry:
 		if self.type == SequenceEntryType.SEQUENCE and not self.ref in sequence_names:
 			raise InvalidReferenceException(parent_sequence, self.ref, self.type)
 
-	def calc_fixed_duration(self, sequences):
+	def calc_fixed_duration(self, sequences: Dict[str,Sequence]) -> int:
 		fixed_duration = 0
 		if self.type == SequenceEntryType.STATE:
 			if not self.has_weight:
@@ -241,7 +252,7 @@ class SequenceEntryType(Enum):
 	STATE = 1
 	SEQUENCE = 2
 
-	def __str__(self):
+	def __str__(self) -> str:
 		return self.name.lower()
 
 class InvalidReferenceException(McMetagenException):

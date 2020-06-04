@@ -155,8 +155,7 @@ def test_states():
 		])
 	)
 
-def test_sequences():
-	# Pass no duration to fixed duration sequence
+def test_fixed_duration_sequences():
 	assert_animation(
 		{
 			"states": ["a","b","c"],
@@ -183,25 +182,8 @@ def test_sequences():
 		])
 	)
 
-	# Pass no duration to weighted sequence
-	assert_exception(
-		{
-			"states": ["a","b","c"],
-			"sequences": {
-				"seq_a": [
-					{ "state": "a", "weight": 1 },
-					{ "state": "b", "weight": 1 }
-				]
-			},
-			"animation": [
-				{ "sequence": "seq_a" } # <-- duration 1 not enough for weighted 2 entries
-			]
-		},
-		McMetagenException, "Duration '1' is not enough"
-	)
 
-
-def test_weighted_sequence():
+def test_weighted_sequences():
 	assert_animation(
 		{
 			"states": ["a","b","c"],
@@ -249,4 +231,21 @@ def test_weighted_sequence():
 				AnimatedState(38,123,1)
 			])
 		])
+	)
+
+	# Pass no duration to weighted sequence
+	assert_exception(
+		{
+			"states": ["a","b","c"],
+			"sequences": {
+				"seq_a": [
+					{ "state": "a", "weight": 1 },
+					{ "state": "b", "weight": 1 }
+				]
+			},
+			"animation": [
+				{ "sequence": "seq_a" } # <-- duration 1 not enough for weighted 2 entries
+			]
+		},
+		McMetagenException, "Duration '1' is not enough"
 	)
