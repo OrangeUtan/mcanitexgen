@@ -169,7 +169,7 @@ def test_fixed_duration_sequences():
 				]
 			},
 			"animation": [
-				{ "sequence": "seq_a" } # <-- no duration passed
+				{ "sequence": "seq_a" }
 			]
 		},
 		AnimatedGroup(0,20,"",[
