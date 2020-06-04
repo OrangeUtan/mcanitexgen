@@ -200,12 +200,12 @@ class SequenceEntry:
 
 	@classmethod
 	def from_json(cls, json: Dict):
-		if "sequence" in json:
+		if str(SequenceEntryType.SEQUENCE) in json:
 			type = SequenceEntryType.SEQUENCE
-			ref = json["sequence"]
-		elif "state" in json:
+			ref = json[str(SequenceEntryType.SEQUENCE)]
+		elif str(SequenceEntryType.STATE) in json:
 			type = SequenceEntryType.STATE
-			ref = json["state"]
+			ref = json[str(SequenceEntryType.STATE)]
 		else:
 			raise McMetagenException("Sequence entry is missing reference to state or sequence")
 
@@ -241,14 +241,8 @@ class SequenceEntryType(Enum):
 	STATE = 1
 	SEQUENCE = 2
 
-	@classmethod
-	def from_string(cls, str: str) -> SequenceEntryType:
-		if str == "state":
-			return SequenceEntryType.STATE
-		elif str == "sequence":
-			return SequenceEntryType.SEQUENCE
-		else:
-			raise ValueError(f"'{str}' cannot be mapped to a reference type")
+	def __str__(self):
+		return self.name.lower()
 
 class InvalidReferenceException(McMetagenException):
 	def __init__(self, parent_sequence: str, ref_target: str, ref_type: SequenceEntryType):
