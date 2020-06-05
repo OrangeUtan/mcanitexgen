@@ -154,6 +154,13 @@ class Sequence:
 		animatedEntries = []
 		currentTime = start
 		for i, (entry, entry_duration) in enumerate(zip(self.entries, entry_durations)):
+			if entry.start:
+				if currentTime == 0:
+					raise McMetagenException(f"Sequence '{self.name}': {i+1}. entry can't start at '{entry.start}', because there is no previous entry")
+				if currentTime > entry.start:
+					raise McMetagenException(f"Sequence '{self.name}': {i+1}. entry can't start at '{entry.start}', because of previous entry")
+				currentTime = entry.start
+
 			if entry.end:
 				if currentTime >= entry.end:
 					raise McMetagenException(f"Sequence '{self.name}': {i+1}. entry can't end at '{entry.end}', because of previous entry")
@@ -170,7 +177,13 @@ class Sequence:
 
 				animatedEntry = entry.to_animated_entry(currentTime, part_duration, textureAnimation)
 				animatedEntries.append(animatedEntry)
-				currentTime += animatedEntry.duration
+				currentTime = animatedEntry.end
+
+			if len(animatedEntries) >= 2:
+				animatedEntries[-2].end = animatedEntries[-1].start
+
+		if animatedEntries:
+			start = animatedEntries[0].start
 
 		return AnimatedGroup(start, currentTime, self.name, animatedEntries)
 
