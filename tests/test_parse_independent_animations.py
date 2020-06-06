@@ -266,7 +266,7 @@ def test_weighted_sequences():
 				{ "sequence": "seq_a" } # <-- duration 1 not enough for weighted 2 entries
 			]
 		},
-		McMetagenException, "Duration '1' passed to sequence 'seq_a' is smaller"
+		McMetagenException, "Sequence 'seq_a': Duration must be at least '20', but was '1'"
 	)
 
 def test_end():

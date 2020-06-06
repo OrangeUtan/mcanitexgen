@@ -1,10 +1,11 @@
 from __future__ import annotations # Replaces all type annotations with strings. Fixes forward reference
 import math
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Iterable
 from enum import Enum
 import itertools
 from mcmetagen.Exceptions import *
+from mcmetagen.Utils import *
 
 @dataclass
 class TextureAnimation:
@@ -18,7 +19,7 @@ class TextureAnimation:
 		self.states = states
 		self.sequences = sequences
 		self.root_sequence = root_sequence
-		self.animation = root_sequence.to_animation(0, None, self)
+		self.animation = root_sequence.to_animation(0, 0, self)
 
 	@classmethod
 	def from_json(cls, json: dict) -> TextureAnimation:
@@ -41,6 +42,7 @@ class TextureAnimation:
 		if not "animation" in json:
 			raise McMetagenException("Texture animation is missing 'animation' parameter")
 
+		# Parse root sequence
 		root = Sequence.from_json("", json["animation"], states.keys(), sequence_names)
 		root.post_init(sequences)
 
@@ -128,32 +130,51 @@ class Sequence:
 		return Sequence(name, entries, total_weight)		
 
 	def post_init(self, sequences: Dict[str,Sequence]):
-		""" Executes logic dependent on data that only exists after initialisation of the sequence """
+		""" Executes logic dependent on data that only exists after initialization of the sequence """
 		self.fixed_duration = self.calc_fixed_duration(sequences)
 
 	def calc_fixed_duration(self, sequences: Dict[str,Sequence]) -> int:
+		"""
+		Recursively calculates the sum of the durations of all entries.
+
+		If a weighted sequence tries to distribute a duration, its possible that some of its entries are not weighted and already have a duration.
+		Thus, some of the to be distributed duration is already taken by these entries.
+		"""
+
 		if not self.fixed_duration:
 			self.fixed_duration = sum(map(lambda entry: entry.calc_fixed_duration(sequences), self.entries))
 		return self.fixed_duration
 
 	@property
 	def is_weighted(self) -> bool:
+		""" 
+		Returns wether this sequence contains any weighted entries.
+
+		Weighted sequences have to be passed a duration, which is then distribute to its entries, based on their weights.
+		"""
+
 		return self.total_weight > 0
 
-	def to_animation(self, start: int, duration: Optional(int), textureAnimation: TextureAnimation) -> AnimatedGroup:
-
+	def to_animation(self, currentTime: int, duration: int, textureAnimation: TextureAnimation) -> AnimatedGroup:
+		# Are there any weighted entries
 		if self.is_weighted:
-			if not duration:
+			if duration == 0:
 				raise McMetagenException(f"Didn't pass duration to weighted sequence '{self.name}'")
 			if duration <= self.fixed_duration:
-				raise McMetagenException(f"Duration '{duration}' passed to sequence '{self.name}' is smaller than its fixed duration")
-			entry_durations = distribute_duration(duration-self.fixed_duration, self.total_weight, self.entries)
-		else:
-			entry_durations = map(lambda entry: entry.duration, self.entries)
+				raise McMetagenException(f"Sequence '{self.name}': Duration must be at least '{self.fixed_duration}', but was '{duration}'")
+
+			# Calculate times for weighted entries
+			distributable_duration = duration-self.fixed_duration # Duration that can be distributed over the weighted entries
+			weights_of_weighted_entries = map(lambda entry: entry.weight, filter(lambda entry: entry.has_weight, self.entries))
+			weighted_durations = partition_by_weights(distributable_duration, self.total_weight, weights_of_weighted_entries)
 
 		animatedEntries = []
-		currentTime = start
-		for i, (entry, entry_duration) in enumerate(zip(self.entries, entry_durations)):
+		for i, entry in enumerate(self.entries):
+
+			# Get duration of current entry
+			entry_duration = next(weighted_durations) if entry.has_weight else entry.duration
+
+			# Entry has 'start' property
 			if entry.start:
 				if currentTime == 0:
 					raise McMetagenException(f"Sequence '{self.name}': {i+1}. entry can't start at '{entry.start}', because there is no previous entry")
@@ -161,49 +182,37 @@ class Sequence:
 					raise McMetagenException(f"Sequence '{self.name}': {i+1}. entry can't start at '{entry.start}', because of previous entry")
 				currentTime = entry.start
 
+			# Entry has 'end' property
 			if entry.end:
 				if currentTime >= entry.end:
 					raise McMetagenException(f"Sequence '{self.name}': {i+1}. entry can't end at '{entry.end}', because of previous entry")
 				entry_duration = entry.end - currentTime
 
+			# Get the durations of each repetition of the current entry.
 			if entry.has_weight:
-				part_durations = distribute_duration(entry_duration, entry.weight*entry.repeat, [entry for i in range(entry.repeat)])
+				# Repetitions of weighted entries have to all fit within its (above) calculated duration. 
+				# E.g.: An Entry with duration 20 and repeat 4, will generate 4 AnimatedEntries, each with a duration of 5.
+				repetition_durations = partition_by_weights(entry_duration, entry.weight*entry.repeat, itertools.repeat(entry.weight, entry.repeat))
 			else:
-				part_durations = itertools.repeat(entry_duration, entry.repeat)
+				# Unweighted entries just get repeatet with the same duration
+				repetition_durations = itertools.repeat(entry_duration, entry.repeat)
 
-			for part_duration in part_durations:
-				if part_duration <= 0:
-					raise McMetagenException(f"Sequence '{self.name}': Duration of '{duration}' exhausted while trying to distribute it over entries")
+			for repetition_duration in repetition_durations:
+				if repetition_duration <= 0:
+					raise McMetagenException(f"Sequence '{self.name}': Duration of '{distributable_duration}' exhausted while trying to distribute it over entries")
 
-				animatedEntry = entry.to_animated_entry(currentTime, part_duration, textureAnimation)
+				# Convert to AnimatedEntry
+				animatedEntry = entry.to_animated_entry(currentTime, repetition_duration, textureAnimation)
+				
+				# Previous AnimatedEntry always has to end at the start of the new entry. Makes sure 'start' property can backpropagate
+				if animatedEntries:
+					animatedEntries[-1].end = animatedEntry.start
+
+				# Add entry
 				animatedEntries.append(animatedEntry)
 				currentTime = animatedEntry.end
 
-			if len(animatedEntries) >= 2:
-				animatedEntries[-2].end = animatedEntries[-1].start
-
-		if animatedEntries:
-			start = animatedEntries[0].start
-
-		return AnimatedGroup(start, currentTime, self.name, animatedEntries)
-
-def distribute_duration(duration:int, total_weight:int, entries: List[SequenceEntry]):
-	""" Distributes a duration over a collection of weighted SequenceEntries """
-
-	remaining_duration = duration
-	remaining_weight = total_weight
-	for entry in entries:
-		if entry.has_weight:
-			weighted_duration = round_half_up((entry.weight*remaining_duration)/remaining_weight)
-			remaining_duration -= weighted_duration
-			remaining_weight -= entry.weight
-			yield weighted_duration
-		else:
-			yield entry.duration
-
-def round_half_up(num, decimals:int = 0) -> int:
-    multiplier = 10 ** decimals
-    return math.floor(num*multiplier + 0.5) / multiplier
+		return AnimatedGroup(animatedEntries[0].start, currentTime, self.name, animatedEntries)
 
 @dataclass
 class SequenceEntry:
