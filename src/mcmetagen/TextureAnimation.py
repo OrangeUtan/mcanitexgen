@@ -1,7 +1,7 @@
 from __future__ import annotations # Replaces all type annotations with strings. Fixes forward reference
 import math
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Iterable
+from typing import List, Dict, Optional, Iterable, Any
 from enum import Enum
 import itertools
 from mcmetagen.Exceptions import *
@@ -268,17 +268,20 @@ class SequenceEntry:
 			raise McMetagenException("Sequence entry is missing reference to state or sequence")
 
 		repeat = json.get("repeat", 1)
-		duration = json.get("duration", 1)
 		weight = json.get("weight", 0)
 		mark = json.get("mark")
 		
-		# Evaluate start/end expressions
-		start = json.get("start")
-		if start:
-			start = SequenceEntry.evaluate_expr(str(start), texture_animations = texture_animations)
-		end = json.get("end")
-		if end:
-			end = SequenceEntry.evaluate_expr(str(end), texture_animations = texture_animations)
+		# Evaluate expressions
+		try:
+			duration = int(SequenceEntry.evaluate_expr(str(json.get("duration", 1)), texture_animations))
+			start = json.get("start")
+			if start:
+				start = int(SequenceEntry.evaluate_expr(str(start), texture_animations = texture_animations))
+			end = json.get("end")
+			if end:
+				end = int(SequenceEntry.evaluate_expr(str(end), texture_animations = texture_animations))
+		except TypeError:
+			raise McMetagenException(f"Expression must be a number")
 
 		return SequenceEntry(type, ref, repeat, duration, weight, start, end, mark)
 
@@ -309,14 +312,9 @@ class SequenceEntry:
 		return fixed_duration
 
 	@classmethod
-	def evaluate_expr(cls, expr:str, variables: Dict = dict(), texture_animations: Dict = dict()) -> int:
+	def evaluate_expr(cls, expr:str, variables: Dict = dict(), texture_animations: Dict = dict()) -> Any:
 		expression_globals.update(texture_animations)
-		try:
-			evaluated = eval(expr, expression_globals, variables)
-			evaluated = int(evaluated)
-		except TypeError:
-			raise McMetagenException(f"Expression must be a number, but is '{type(evaluated)}'")
-		return evaluated
+		return eval(expr, expression_globals, variables)
 
 class SequenceEntryType(Enum):
 	STATE = 1

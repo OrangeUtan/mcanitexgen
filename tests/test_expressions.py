@@ -1,4 +1,5 @@
 import pytest
+from typing import Any
 from mcmetagen.TextureAnimation import *
 
 def assert_animation(json: Dict, expected: AnimatedGroup, texture_animations: Dict[str,TextureAnimation] = dict()):
@@ -15,6 +16,9 @@ def assert_exception(json: Dict, exception_type, message: Optional[str] = None):
 def assert_marks(json: Dict, expected: Dict[str, AnimationMark]):
 	parsedTextureAnimation = TextureAnimation.from_json("root",json)
 	assert expected == parsedTextureAnimation.marks
+
+def assert_expr_evaluation(expr:str, expected:Any, variables=dict(), texture_animations=dict()):
+	assert expected == SequenceEntry.evaluate_expr(expr, variables, texture_animations)
 
 class TestMarks:
 
@@ -96,25 +100,78 @@ class TestMarks:
 			}
 		)
 
-class TestBasicExpr:
-	def test_basic_end_expr(self):
+class TestArithmeticExpressions:
+	def test_values(self):
+		assert_expr_evaluation("3894793745", 3894793745)
+		assert_expr_evaluation("'a string'", "a string")
+		assert_expr_evaluation("[1,2,3]", [1,2,3])
+
+	def test_basic_arithmetic(self):
+		assert_expr_evaluation("(4+5)-(1+2+3)", 3)
+		assert_expr_evaluation("(7*4)/2", 14)
+
+	def test_arithmetic_functions(self):
+		assert_expr_evaluation("e", math.e)
+		assert_expr_evaluation("pi", math.pi)
+		assert_expr_evaluation("pow(3,3)", 27)
+		assert_expr_evaluation("mod(230,100)", 30)
+		assert_expr_evaluation("log(e)+log(100,10)", 1+2)
+		assert_expr_evaluation("sqrt(4)", 2)
+		assert_expr_evaluation("exp(log(3453))", pytest.approx(3453))
+		assert_expr_evaluation("factorial(12)", 479001600)
+		assert_expr_evaluation("ceil(12.1123574687456)", 13)
+		assert_expr_evaluation("floor(34.992329923)", 34)
+		assert_expr_evaluation("gcd(234,123)", 3)
+
+	def test_trigonometry(self):
+		assert_expr_evaluation("sin(pi)", pytest.approx(0))
+		assert_expr_evaluation("cos(0)", 1)
+
+class TestEndExpr:
+	texture_animations = {
+		"ta1": TextureAnimation.from_json("ta1",
+			{
+				"states": ["a", "b", "c"],
+				"sequences": {
+					"seq_a": [
+						{ "state": "a", "duration": 5, "mark": "in seq_a" }
+					],
+					"seq_b": [
+						{ "state": "b", "duration": 5, "mark": "in seq_b" }
+					]
+				},
+				"animation": [
+					{ "sequence": "seq_a", "mark": "seq_a"},
+					{ "sequence": "seq_b", "mark": "seq_b"}
+				]
+			}
+		)
+	}
+
+	def test_basic(self):
 		assert_animation(
 			{
 				"states": ["a","b","c"],
 				"animation": [
-					{ "state": "a", "duration": 5 },
-					{ "state": "b", "end": "95" },
-					{ "state": "a", "duration": 5 }
+					{ "state": "a", "end": "(12/4)+2-3" },
+					{ "state": "a", "end": "ceil(30/4)" },
+					{ "state": "b", "end": "floor(45/4)" },
+					{ "state": "c", "end": "pow(3,3)" },
+					{ "state": "a", "end": "mod(230,100)" },
+					{ "state": "b", "end": "30 + 10*sin(rad(20))" }
 				]
 			},
-			AnimatedGroup(0,100,"", [
-				AnimatedState(0,5,0),
-				AnimatedState(5,95,1),
-				AnimatedState(95,100,0)
+			AnimatedGroup(0,33,"", [
+				AnimatedState(0,2,0),
+				AnimatedState(2,8,0),
+				AnimatedState(8,11,1),
+				AnimatedState(11,27,2),
+				AnimatedState(27,30,0),
+				AnimatedState(30,33,1)
 			])
 		)
 
-	def test_basic_nested_end_expr(self):
+	def test_basic_nested(self):
 		assert_animation(
 			{
 				"states": ["a","b","c"],
@@ -138,7 +195,7 @@ class TestBasicExpr:
 			])
 		)
 
-	def test_end_already_reached(self):
+	def test_already_reached(self):
 		""" An entry has its 'end' property set, but a previous entry already reaches that time.
 			'end' works by setting the duration of the current entry to the time needed to reach that end time.
 			If a previous entry already reached that time, the current entrys duration would be 0, thus invalid. 
@@ -156,7 +213,7 @@ class TestBasicExpr:
 			McMetagenException, "Sequence '': 2. entry can't end at '95'"
 		)
 
-	def test_end_already_reached_nested(self):
+	def test_already_reached_nested(self):
 		assert_exception(
 			{
 				"states": ["a","b","c"],
@@ -174,7 +231,23 @@ class TestBasicExpr:
 			McMetagenException, "Sequence 'seq_a': 1. entry can't end at '95'"
 		)
 
-	def test_basic_start_expr(self):
+	def test_with_mark_reference(self):
+		assert_animation(
+			{
+				"states": ["a","b","c"],
+				"animation": [
+					{ "state": "a", "end": "ta1.mark('seq_b').end" }
+				]
+			},
+			AnimatedGroup(0,10,"", [
+				AnimatedState(0,10,0)
+			]),
+			self.texture_animations
+		)
+
+class TestStartExpr:
+
+	def test_basic(self):
 		assert_animation(
 			{
 				"states": ["a","b","c"],
@@ -191,7 +264,7 @@ class TestBasicExpr:
 			])
 		)
 
-	def test_basic_nested_start_expr(self):
+	def test_basic_nested(self):
 		assert_animation(
 			{
 				"states": ["a","b","c"],
@@ -215,7 +288,7 @@ class TestBasicExpr:
 			])
 		)
 
-	def test_start_with_no_previous_entry(self):
+	def test_with_no_previous_entry(self):
 		""" An entry has its 'start' attribute set, but there is no previous entry.
 
 			'start' works by extending the duration of the previous entry until the start of the current one.
@@ -233,7 +306,7 @@ class TestBasicExpr:
 			McMetagenException, "there is no previous entry"
 		)
 
-	def test_start_with_no_previous_entry_nested(self):
+	def test_with_no_previous_entry_nested(self):
 		assert_exception(
 			{
 				"states": ["a","b","c"],
@@ -250,87 +323,26 @@ class TestBasicExpr:
 			McMetagenException, "there is no previous entry"
 		)
 
-class TestArtihmeticExpr:
-	def test_basic_arithmetic_expr(self):
+class TestDurationExpr:
+	def test_basic_duration_expr(self):
 		assert_animation(
 			{
 				"states": ["a","b","c"],
 				"animation": [
-					{ "state": "a"},
-					{ "state": "b", "start": "(4*5)/2 + 12" },
-					{ "state": "c", "end": "10*10*(2-1)" }
+					{ "state": "a", "duration": "(12/4)+2-3" },
+					{ "state": "a", "duration": "ceil(30/4)" },
+					{ "state": "b", "duration": "floor(45/4)" },
+					{ "state": "c", "duration": "pow(3,3)" },
+					{ "state": "a", "duration": "mod(230,100)" },
+					{ "state": "b", "duration": "30 + 10*sin(rad(20))" }
 				]
 			},
-			AnimatedGroup(0,100,"", [
-				AnimatedState(0,22,0),
-				AnimatedState(22,23,1),
-				AnimatedState(23,100,2)
+			AnimatedGroup(0,111,"", [
+				AnimatedState(0,2,0),
+				AnimatedState(2,10,0),
+				AnimatedState(10,21,1),
+				AnimatedState(21,48,2),
+				AnimatedState(48,78,0),
+				AnimatedState(78,111,1)
 			])
-		)
-
-	def test_expr_with_arithmetic_functions(self):
-		assert_animation(
-			{
-				"states": ["a","b","c"],
-				"animation": [
-					{ "state": "a", "end": "ceil(30/4)" },
-					{ "state": "b", "end": "floor(45/4)" },
-					{ "state": "c", "end": "pow(3,3)" },
-					{ "state": "a", "end": "mod(230,100)" },
-				]
-			},
-			AnimatedGroup(0,30,"", [
-				AnimatedState(0,8,0),
-				AnimatedState(8,11,1),
-				AnimatedState(11,27,2),
-				AnimatedState(27,30,0)
-			])
-		)
-
-	def test_expr_with_trigonometry(self):
-		assert_animation(
-			{
-				"states": ["a","b","c"],
-				"animation": [
-					{ "state": "a", "end": "10*sin(rad(20))" }
-				]
-			},
-			AnimatedGroup(0,3,"", [
-				AnimatedState(0,3,0)
-			])
-		)
-
-class TestComplexExpr:
-	texture_animations = {
-		"ta1": TextureAnimation.from_json("ta1",
-			{
-				"states": ["a", "b", "c"],
-				"sequences": {
-					"seq_a": [
-						{ "state": "a", "duration": 5, "mark": "in seq_a" }
-					],
-					"seq_b": [
-						{ "state": "b", "duration": 5, "mark": "in seq_b" }
-					]
-				},
-				"animation": [
-					{ "sequence": "seq_a", "mark": "seq_a"},
-					{ "sequence": "seq_b", "mark": "seq_b"}
-				]
-			}
-		)
-	}
-
-	def test_basic_reference(self):
-		assert_animation(
-			{
-				"states": ["a","b","c"],
-				"animation": [
-					{ "state": "a", "end": "ta1.mark('seq_b').end" }
-				]
-			},
-			AnimatedGroup(0,10,"", [
-				AnimatedState(0,10,0)
-			]),
-			self.texture_animations
 		)
