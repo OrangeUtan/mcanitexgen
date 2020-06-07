@@ -3,20 +3,20 @@ from mcmetagen.TextureAnimation import *
 from mcmetagen.Exceptions import *
 
 def assert_states(json: Dict, expected: Dict[str, AnimatedState]):
-	parsedTextureAnimation = TextureAnimation.from_json(json)
+	parsedTextureAnimation = TextureAnimation.from_json("root",json)
 	assert expected == parsedTextureAnimation.states
 
 def assert_sequences(json: Dict, expected: Dict[str, Sequence]):
-	parsedTextureAnimation = TextureAnimation.from_json(json)
+	parsedTextureAnimation = TextureAnimation.from_json("root",json)
 	assert expected == parsedTextureAnimation.sequences
 
 def assert_animation(json: Dict, expected: AnimatedGroup):
-	parsedTextureAnimation = TextureAnimation.from_json(json)
+	parsedTextureAnimation = TextureAnimation.from_json("root",json)
 	assert expected == parsedTextureAnimation.animation
 
 def assert_exception(json: Dict, exception_type, message: Optional[str] = None):
 	with pytest.raises(exception_type) as e_info:
-		parsedTextureAnimation = TextureAnimation.from_json(json)
+		parsedTextureAnimation = TextureAnimation.from_json("root",json)
 	assert type(e_info.value) == exception_type
 	if message:
 		assert message in str(e_info.value)

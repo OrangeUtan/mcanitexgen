@@ -2,7 +2,7 @@ from typing import Dict, List
 from mcmetagen.TextureAnimation import TextureAnimation, AnimationMark
 
 def assert_marks(json: Dict, expected: Dict[str, List[AnimationMark]]):
-	parsedTextureAnimation = TextureAnimation.from_json(json)
+	parsedTextureAnimation = TextureAnimation.from_json("root", json)
 	assert expected == parsedTextureAnimation.marks
 
 def test_marks_in_state_and_sequence():

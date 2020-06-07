@@ -10,13 +10,15 @@ from mcmetagen.Utils import *
 @dataclass
 class TextureAnimation:
 
+	name: str
 	root_sequence: Sequence
 	states: Dict[str,State]
 	sequences: Dict[str,Sequence]
 	animation: AnimatedGroup
 	marks: Dict[str,AnimationMark]
 
-	def __init__(self, root_sequence:Sequence, states: Dict[str,State], sequences: Dict[str,Sequence]):
+	def __init__(self, name:str, root_sequence:Sequence, states: Dict[str,State], sequences: Dict[str,Sequence]):
+		self.name = name
 		self.states = states
 		self.sequences = sequences
 		self.root_sequence = root_sequence
@@ -24,7 +26,7 @@ class TextureAnimation:
 		self.animation = root_sequence.to_animation(0, 0, self)
 
 	@classmethod
-	def from_json(cls, json: dict) -> TextureAnimation:
+	def from_json(cls, name:str, json: dict) -> TextureAnimation:
 		# Parse states
 		if not "states" in json:
 			raise McMetagenException("Texture animation is missing 'states' parameter")
@@ -48,8 +50,12 @@ class TextureAnimation:
 		root = Sequence.from_json("", json["animation"], states.keys(), sequence_names)
 		root.post_init(sequences)
 
-		return TextureAnimation(root, states, sequences)
+		return TextureAnimation(name, root, states, sequences)
 
+	def mark(self, mark_name:str, index:int = 0):
+		if not mark_name in self.marks:
+			raise McMetagenException(f"TextureAnimation '{self.name}' doesn't have mark '{mark_name}'")
+		return self.marks[mark_name][index]
 		
 	def add_mark(self, name:str, mark: AnimationMark):
 		if not name in self.marks:
