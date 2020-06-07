@@ -1,27 +1,32 @@
 from __future__ import annotations # Replaces all type annotations with strings. Fixes forward reference
 import math
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Iterable
 from enum import Enum
 import itertools
 from mcmetagen.Exceptions import *
+from mcmetagen.Utils import *
 
 @dataclass
 class TextureAnimation:
 
+	name: str
 	root_sequence: Sequence
 	states: Dict[str,State]
 	sequences: Dict[str,Sequence]
 	animation: AnimatedGroup
+	marks: Dict[str,AnimationMark]
 
-	def __init__(self, root_sequence:Sequence, states: Dict[str,State], sequences: Dict[str,Sequence]):
+	def __init__(self, name:str, root_sequence:Sequence, states: Dict[str,State], sequences: Dict[str,Sequence]):
+		self.name = name
 		self.states = states
 		self.sequences = sequences
 		self.root_sequence = root_sequence
-		self.animation = root_sequence.to_animation(0, None, self)
+		self.marks = dict()
+		self.animation = root_sequence.to_animation(0, 0, self)
 
 	@classmethod
-	def from_json(cls, json: dict) -> TextureAnimation:
+	def from_json(cls, name:str, json: dict, texture_animations: Dict[str,TextureAnimation] = dict()) -> TextureAnimation:
 		# Parse states
 		if not "states" in json:
 			raise McMetagenException("Texture animation is missing 'states' parameter")
@@ -31,7 +36,7 @@ class TextureAnimation:
 		sequence_names = json.get("sequences", {}).keys()
 		sequences = dict()
 		for name,entries in json.get("sequences", {}).items():
-			sequence = Sequence.from_json(name, entries, states.keys(), sequence_names)
+			sequence = Sequence.from_json(name, entries, states.keys(), sequence_names, texture_animations)
 			sequences[name] = sequence
 
 		# Post init sequences
@@ -41,10 +46,22 @@ class TextureAnimation:
 		if not "animation" in json:
 			raise McMetagenException("Texture animation is missing 'animation' parameter")
 
-		root = Sequence.from_json("", json["animation"], states.keys(), sequence_names)
+		# Parse root sequence
+		root = Sequence.from_json("", json["animation"], states.keys(), sequence_names, texture_animations)
 		root.post_init(sequences)
 
-		return TextureAnimation(root, states, sequences)
+		return TextureAnimation(name, root, states, sequences)
+
+	def mark(self, mark_name:str, index:int = 0):
+		if not mark_name in self.marks:
+			raise McMetagenException(f"TextureAnimation '{self.name}' doesn't have mark '{mark_name}'")
+		return self.marks[mark_name][index]
+		
+	def add_mark(self, name:str, mark: AnimationMark):
+		if not name in self.marks:
+			self.marks[name] = [mark]
+		else:
+			self.marks[name].append(mark)
 
 @dataclass
 class AnimatedEntry:
@@ -79,6 +96,11 @@ class AnimatedState(AnimatedEntry):
 	def __init__(self, start:int, end:int, index:int):
 		super(AnimatedState, self).__init__(start,end)
 		self.index = index
+
+@dataclass
+class AnimationMark:
+	start: int
+	end: int
 
 @dataclass
 class State:
@@ -116,11 +138,11 @@ class Sequence:
 	fixed_duration: int = field(default=None,init=False) # Duration of the sequence unaffected by weight. Can be thought of as a 'minimum' duration
 
 	@classmethod
-	def from_json(cls, name: str, json: List[dict], state_names: List[str], sequence_names: List[str]) -> Sequence:
+	def from_json(cls, name: str, json: List[dict], state_names: List[str], sequence_names: List[str], texture_animations: Dict[str,TextureAnimation]) -> Sequence:
 		total_weight = 0
 		entries = []
 		for entry_json in json:
-			entry = SequenceEntry.from_json(entry_json)
+			entry = SequenceEntry.from_json(entry_json, texture_animations)
 			entry.validate_reference(name, state_names, sequence_names)
 			total_weight += entry.weight
 			entries.append(entry)
@@ -128,64 +150,93 @@ class Sequence:
 		return Sequence(name, entries, total_weight)		
 
 	def post_init(self, sequences: Dict[str,Sequence]):
-		""" Executes logic dependent on data that only exists after initialisation of the sequence """
+		""" Executes logic dependent on data that only exists after initialization of the sequence """
 		self.fixed_duration = self.calc_fixed_duration(sequences)
 
 	def calc_fixed_duration(self, sequences: Dict[str,Sequence]) -> int:
+		"""
+		Recursively calculates the sum of the durations of all entries.
+
+		If a weighted sequence tries to distribute a duration, its possible that some of its entries are not weighted and already have a duration.
+		Thus, some of the to be distributed duration is already taken by these entries.
+		"""
+
 		if not self.fixed_duration:
 			self.fixed_duration = sum(map(lambda entry: entry.calc_fixed_duration(sequences), self.entries))
 		return self.fixed_duration
 
 	@property
 	def is_weighted(self) -> bool:
+		""" 
+		Returns wether this sequence contains any weighted entries.
+
+		Weighted sequences have to be passed a duration, which is then distribute to its entries, based on their weights.
+		"""
+
 		return self.total_weight > 0
 
-	def to_animation(self, start: int, duration: Optional(int), textureAnimation: TextureAnimation) -> AnimatedGroup:
-
+	def to_animation(self, currentTime: int, duration: int, textureAnimation: TextureAnimation) -> AnimatedGroup:
+		# Are there any weighted entries
 		if self.is_weighted:
-			if not duration:
+			if duration == 0:
 				raise McMetagenException(f"Didn't pass duration to weighted sequence '{self.name}'")
 			if duration <= self.fixed_duration:
-				raise McMetagenException(f"Duration '{duration}' passed to sequence '{self.name}' is smaller than its fixed duration")
-			entry_durations = distribute_duration(duration-self.fixed_duration, self.total_weight, self.entries)
-		else:
-			entry_durations = map(lambda entry: entry.duration, self.entries)
+				raise McMetagenException(f"Sequence '{self.name}': Duration must be at least '{self.fixed_duration}', but was '{duration}'")
+
+			# Calculate times for weighted entries
+			distributable_duration = duration-self.fixed_duration # Duration that can be distributed over the weighted entries
+			weights_of_weighted_entries = map(lambda entry: entry.weight, filter(lambda entry: entry.has_weight, self.entries))
+			weighted_durations = partition_by_weights(distributable_duration, self.total_weight, weights_of_weighted_entries)
 
 		animatedEntries = []
-		currentTime = start
-		for entry, entry_duration in zip(self.entries, entry_durations):
+		for i, entry in enumerate(self.entries):
+
+			# Get duration of current entry
+			entry_duration = next(weighted_durations) if entry.has_weight else entry.duration
+
+			# Entry has 'start' property
+			if entry.start:
+				if currentTime == 0:
+					raise McMetagenException(f"Sequence '{self.name}': {i+1}. entry can't start at '{entry.start}', because there is no previous entry")
+				if currentTime > entry.start:
+					raise McMetagenException(f"Sequence '{self.name}': {i+1}. entry can't start at '{entry.start}', because of previous entry")
+				currentTime = entry.start
+
+			# Entry has 'end' property
+			if entry.end:
+				if currentTime >= entry.end:
+					raise McMetagenException(f"Sequence '{self.name}': {i+1}. entry can't end at '{entry.end}', because of previous entry")
+				entry_duration = entry.end - currentTime
+
+			# Get the durations of each repetition of the current entry.
 			if entry.has_weight:
-				part_durations = distribute_duration(entry_duration, entry.weight*entry.repeat, [entry for i in range(entry.repeat)])
+				# Repetitions of weighted entries have to all fit within its (above) calculated duration. 
+				# E.g.: An Entry with duration 20 and repeat 4, will generate 4 AnimatedEntries, each with a duration of 5.
+				repetition_durations = partition_by_weights(entry_duration, entry.weight*entry.repeat, itertools.repeat(entry.weight, entry.repeat))
 			else:
-				part_durations = itertools.repeat(entry_duration, entry.repeat)
+				# Unweighted entries just get repeatet with the same duration
+				repetition_durations = itertools.repeat(entry_duration, entry.repeat)
 
-			for part_duration in part_durations:
-				if part_duration <= 0:
-					raise McMetagenException(f"Duration of '{duration}' exhausted while trying to distribute it over entries in weighted sequence '{self.name}'")
+			for repetition_duration in repetition_durations:
+				if repetition_duration <= 0:
+					raise McMetagenException(f"Sequence '{self.name}': Duration of '{distributable_duration}' exhausted while trying to distribute it over entries")
 
-				animatedEntry = entry.to_animated_entry(currentTime, part_duration, textureAnimation)
+				# Convert to AnimatedEntry
+				animatedEntry = entry.to_animated_entry(currentTime, repetition_duration, textureAnimation)
+				
+				# Previous AnimatedEntry always has to end at the start of the new entry. Makes sure 'start' property can backpropagate
+				if animatedEntries:
+					animatedEntries[-1].end = animatedEntry.start
+
+				# Add mark if any
+				if entry.mark:
+					textureAnimation.add_mark(entry.mark, AnimationMark(animatedEntry.start, animatedEntry.end))
+
+				# Add entry
 				animatedEntries.append(animatedEntry)
-				currentTime += animatedEntry.duration
+				currentTime = animatedEntry.end
 
-		return AnimatedGroup(start, currentTime, self.name, animatedEntries)
-
-def distribute_duration(duration:int, total_weight:int, entries: List[SequenceEntry]):
-	""" Distributes a duration over a collection of weighted SequenceEntries """
-
-	remaining_duration = duration
-	remaining_weight = total_weight
-	for entry in entries:
-		if entry.has_weight:
-			weighted_duration = round_half_up((entry.weight*remaining_duration)/remaining_weight)
-			remaining_duration -= weighted_duration
-			remaining_weight -= entry.weight
-			yield weighted_duration
-		else:
-			yield entry.duration
-
-def round_half_up(num, decimals:int = 0) -> int:
-    multiplier = 10 ** decimals
-    return math.floor(num*multiplier + 0.5) / multiplier
+		return AnimatedGroup(animatedEntries[0].start, currentTime, self.name, animatedEntries)
 
 @dataclass
 class SequenceEntry:
@@ -198,6 +249,7 @@ class SequenceEntry:
 	weight: int = 0
 	start: Optional(str) = None
 	end: Optional(str) = None
+	mark: Optional(str) = None
 
 	@property
 	def has_weight(self) -> bool:
@@ -205,7 +257,7 @@ class SequenceEntry:
 		return self.weight > 0
 
 	@classmethod
-	def from_json(cls, json: Dict) -> SequenceEntry:
+	def from_json(cls, json: Dict, texture_animations: Dict[str,TextureAnimation]) -> SequenceEntry:
 		if str(SequenceEntryType.SEQUENCE) in json:
 			type = SequenceEntryType.SEQUENCE
 			ref = json[str(SequenceEntryType.SEQUENCE)]
@@ -218,10 +270,17 @@ class SequenceEntry:
 		repeat = json.get("repeat", 1)
 		duration = json.get("duration", 1)
 		weight = json.get("weight", 0)
+		mark = json.get("mark")
+		
+		# Evaluate start/end expressions
 		start = json.get("start")
+		if start:
+			start = SequenceEntry.evaluate_expr(str(start), texture_animations = texture_animations)
 		end = json.get("end")
+		if end:
+			end = SequenceEntry.evaluate_expr(str(end), texture_animations = texture_animations)
 
-		return SequenceEntry(type, ref, repeat, duration, weight, start, end)
+		return SequenceEntry(type, ref, repeat, duration, weight, start, end, mark)
 
 	def to_animated_entry(self, start:int, duration:int, textureAnimation: TextureAnimation) -> AnimatedEntry:
 		if self.type == SequenceEntryType.STATE:
@@ -249,6 +308,16 @@ class SequenceEntry:
 
 		return fixed_duration
 
+	@classmethod
+	def evaluate_expr(cls, expr:str, variables: Dict = dict(), texture_animations: Dict = dict()) -> int:
+		expression_globals.update(texture_animations)
+		try:
+			evaluated = eval(expr, expression_globals, variables)
+			evaluated = int(evaluated)
+		except TypeError:
+			raise McMetagenException(f"Expression must be a number, but is '{type(evaluated)}'")
+		return evaluated
+
 class SequenceEntryType(Enum):
 	STATE = 1
 	SEQUENCE = 2
@@ -262,3 +331,41 @@ class InvalidReferenceException(McMetagenException):
 			super(InvalidReferenceException, self).__init__(f"Reference '{ref_target}' in sequence '{parent_sequence}' does not name a state")
 		elif ref_type == SequenceEntryType.SEQUENCE:
 			super(InvalidReferenceException, self).__init__(f"Reference '{ref_target}' in sequence '{parent_sequence}' does not name a sequence")
+
+######################
+# Expression parsing #
+######################
+
+expression_globals = {
+	# Constants
+	"e": math.e,
+	"pi": math.pi,
+
+	# Trigonometry
+	"deg": math.degrees,
+	"rad": math.radians,
+	"sin": math.sin,
+	"sinh": math.sinh,
+	"asinh": math.asin,
+	"asinh": math.asinh,
+	"cos": math.cos,
+	"cosh": math.cosh,
+	"acos": math.acos,
+	"acosh": math.acosh,
+	"tan": math.tan,
+	"tanh": math.tanh,
+	"atan": math.atan,
+	"atan2": math.atan2,
+	"atanh": math.atanh,
+
+	# Math
+	"pow": math.pow,
+	"mod": math.fmod,
+	"log": math.log,
+	"sqrt": math.sqrt,
+	"exp": math.exp,
+	"factorial": math.factorial,
+	"ceil": math.ceil,
+	"floor": math.floor,
+	"gcd": math.gcd,
+}

@@ -3,20 +3,20 @@ from mcmetagen.TextureAnimation import *
 from mcmetagen.Exceptions import *
 
 def assert_states(json: Dict, expected: Dict[str, AnimatedState]):
-	parsedTextureAnimation = TextureAnimation.from_json(json)
+	parsedTextureAnimation = TextureAnimation.from_json("root",json)
 	assert expected == parsedTextureAnimation.states
 
 def assert_sequences(json: Dict, expected: Dict[str, Sequence]):
-	parsedTextureAnimation = TextureAnimation.from_json(json)
+	parsedTextureAnimation = TextureAnimation.from_json("root",json)
 	assert expected == parsedTextureAnimation.sequences
 
 def assert_animation(json: Dict, expected: AnimatedGroup):
-	parsedTextureAnimation = TextureAnimation.from_json(json)
+	parsedTextureAnimation = TextureAnimation.from_json("root",json)
 	assert expected == parsedTextureAnimation.animation
 
 def assert_exception(json: Dict, exception_type, message: Optional[str] = None):
 	with pytest.raises(exception_type) as e_info:
-		parsedTextureAnimation = TextureAnimation.from_json(json)
+		parsedTextureAnimation = TextureAnimation.from_json("root",json)
 	assert type(e_info.value) == exception_type
 	if message:
 		assert message in str(e_info.value)
@@ -156,6 +156,7 @@ def test_states():
 	)
 
 def test_fixed_duration_sequences():
+	# Nested
 	assert_animation(
 		{
 			"states": ["a","b","c"],
@@ -183,7 +184,7 @@ def test_fixed_duration_sequences():
 	)
 
 
-def test_weighted_sequences():
+def test_basic_weighted_sequence():
 	assert_animation(
 		{
 			"states": ["a","b","c"],
@@ -207,7 +208,7 @@ def test_weighted_sequences():
 		])
 	)
 
-	# Mixed sequence
+def test_mixed_sequence():
 	assert_animation(
 		{
 			"states": ["a","b","c"],
@@ -233,7 +234,7 @@ def test_weighted_sequences():
 		])
 	)
 
-	# Pass no duration to weighted sequence
+def test_pass_no_duration_to_weighted_sequences():
 	assert_exception(
 		{
 			"states": ["a","b","c"],
@@ -265,5 +266,5 @@ def test_weighted_sequences():
 				{ "sequence": "seq_a" } # <-- duration 1 not enough for weighted 2 entries
 			]
 		},
-		McMetagenException, "Duration '1' passed to sequence 'seq_a' is smaller"
+		McMetagenException, "Sequence 'seq_a': Duration must be at least '20', but was '1'"
 	)
