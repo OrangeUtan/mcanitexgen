@@ -3,20 +3,20 @@ from mcmetagen.TextureAnimation import *
 from mcmetagen.Exceptions import *
 
 def assert_states(json: Dict, expected: Dict[str, AnimatedState]):
-	parsedTextureAnimation = TextureAnimation.from_json(json)
+	parsedTextureAnimation = TextureAnimation.from_json("root",json)
 	assert expected == parsedTextureAnimation.states
 
 def assert_sequences(json: Dict, expected: Dict[str, Sequence]):
-	parsedTextureAnimation = TextureAnimation.from_json(json)
+	parsedTextureAnimation = TextureAnimation.from_json("root",json)
 	assert expected == parsedTextureAnimation.sequences
 
 def assert_animation(json: Dict, expected: AnimatedGroup):
-	parsedTextureAnimation = TextureAnimation.from_json(json)
+	parsedTextureAnimation = TextureAnimation.from_json("root",json)
 	assert expected == parsedTextureAnimation.animation
 
 def assert_exception(json: Dict, exception_type, message: Optional[str] = None):
 	with pytest.raises(exception_type) as e_info:
-		parsedTextureAnimation = TextureAnimation.from_json(json)
+		parsedTextureAnimation = TextureAnimation.from_json("root",json)
 	assert type(e_info.value) == exception_type
 	if message:
 		assert message in str(e_info.value)
@@ -184,7 +184,7 @@ def test_fixed_duration_sequences():
 	)
 
 
-def test_weighted_sequences():
+def test_basic_weighted_sequence():
 	assert_animation(
 		{
 			"states": ["a","b","c"],
@@ -208,7 +208,7 @@ def test_weighted_sequences():
 		])
 	)
 
-	# Mixed sequence
+def test_mixed_sequence():
 	assert_animation(
 		{
 			"states": ["a","b","c"],
@@ -234,7 +234,7 @@ def test_weighted_sequences():
 		])
 	)
 
-	# Pass no duration to weighted sequence
+def test_pass_no_duration_to_weighted_sequences():
 	assert_exception(
 		{
 			"states": ["a","b","c"],
@@ -267,158 +267,4 @@ def test_weighted_sequences():
 			]
 		},
 		McMetagenException, "Sequence 'seq_a': Duration must be at least '20', but was '1'"
-	)
-
-def test_end():
-	assert_animation(
-		{
-			"states": ["a","b","c"],
-			"animation": [
-				{ "state": "a", "duration": 5 },
-				{ "state": "b", "end": 95 },
-				{ "state": "a", "duration": 5 }
-			]
-		},
-		AnimatedGroup(0,100,"", [
-			AnimatedState(0,5,0),
-			AnimatedState(5,95,1),
-			AnimatedState(95,100,0)
-		])
-	)
-
-	# Nested end
-	assert_animation(
-		{
-			"states": ["a","b","c"],
-			"sequences": {
-				"seq_a": [
-					{ "state": "b", "end": 95 }
-				]
-			},
-			"animation": [
-				{ "state": "a", "duration": 5 },
-				{ "sequence": "seq_a"},
-				{ "state": "a", "duration": 5 }
-			]
-		},
-		AnimatedGroup(0,100,"", [
-			AnimatedState(0,5,0),
-			AnimatedGroup(5,95,"seq_a",[
-				AnimatedState(5,95,1)
-			]),
-			AnimatedState(95,100,0)
-		])
-	)
-
-def test_end_already_reached():
-	""" An entry has its 'end' attribute set, but a previous entry already reaches that time.
-
-		'end' works by setting the duration of the current entry to the time needed to reach that end time.
-		If a previous entry already reached that time, the current entrys duration would be 0, thus invalid. 
-	"""
-
-	assert_exception(
-		{
-			"states": ["a","b","c"],
-			"animation": [
-				{ "state": "a", "duration": 95 },
-				{ "state": "b", "end": 95 }, # <--
-				{ "state": "a", "duration": 5 }
-			]
-		},
-		McMetagenException, "Sequence '': 2. entry can't end at '95'"
-	)
-
-	# Nested
-	assert_exception(
-		{
-			"states": ["a","b","c"],
-			"sequences": {
-				"seq_a": [
-					{ "state": "b", "end": 95 } # <--
-				]
-			},
-			"animation": [
-				{ "state": "a", "duration": 95 },
-				{ "sequence": "seq_a"},
-				{ "state": "a", "duration": 5 }
-			]
-		},
-		McMetagenException, "Sequence 'seq_a': 1. entry can't end at '95'"
-	)
-
-def test_start():
-	assert_animation(
-		{
-			"states": ["a","b","c"],
-			"animation": [
-				{ "state": "a", "duration": 5 },
-				{ "state": "b", "start": 85, "duration": 10 }, # <--
-				{ "state": "a", "duration": 5 }
-			]
-		},
-		AnimatedGroup(0,100,"", [
-			AnimatedState(0,85,0),
-			AnimatedState(85,95,1),
-			AnimatedState(95,100,0)
-		])
-	)
-
-	# Nested 
-	assert_animation(
-		{
-			"states": ["a","b","c"],
-			"sequences": {
-				"seq_a": [
-					{ "state": "b", "start": 85, "duration": 10 } # <--
-				]
-			},
-			"animation": [
-				{ "state": "a", "duration": 5 },
-				{ "sequence": "seq_a" },
-				{ "state": "a", "duration": 5 }
-			]
-		},
-		AnimatedGroup(0,100,"", [
-			AnimatedState(0,85,0),
-			AnimatedGroup(85,95,"seq_a", [
-				AnimatedState(85,95,1)
-			]),
-			AnimatedState(95,100,0)
-		])
-	)
-
-def test_start_with_no_previous_entry():
-	""" An entry has its 'start' attribute set, but there is no previous entry.
-
-		'start' works by extending the duration of the previous entry until the start of the current one.
-		Of course thats impossible if there is no previous entry. 
-	"""
-
-	assert_exception(
-		{
-			"states": ["a","b","c"],
-			"animation": [
-				{ "state": "b", "start": 85, "duration": 10 },
-				{ "state": "a", "duration": 5 }
-			]
-		},
-		McMetagenException, "there is no previous entry"
-	)
-
-	# Nested
-	assert_exception(
-		{
-			"states": ["a","b","c"],
-			"sequences": {
-				"seq_a": [
-					{ "state": "b", "start": 85, "duration": 10 }
-				]
-			},
-			"animation": [
-				{ "sequence": "seq_a" }, # <-- tries to start at 85, but no previous
-				{ "state": "a", "duration": 5 }
-			]
-		},
-		McMetagenException, "there is no previous entry"
 	)
