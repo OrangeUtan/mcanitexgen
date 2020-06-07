@@ -26,7 +26,7 @@ class TextureAnimation:
 		self.animation = root_sequence.to_animation(0, 0, self)
 
 	@classmethod
-	def from_json(cls, name:str, json: dict) -> TextureAnimation:
+	def from_json(cls, name:str, json: dict, texture_animations: Dict[str,TextureAnimation] = dict()) -> TextureAnimation:
 		# Parse states
 		if not "states" in json:
 			raise McMetagenException("Texture animation is missing 'states' parameter")
@@ -36,7 +36,7 @@ class TextureAnimation:
 		sequence_names = json.get("sequences", {}).keys()
 		sequences = dict()
 		for name,entries in json.get("sequences", {}).items():
-			sequence = Sequence.from_json(name, entries, states.keys(), sequence_names)
+			sequence = Sequence.from_json(name, entries, states.keys(), sequence_names, texture_animations)
 			sequences[name] = sequence
 
 		# Post init sequences
@@ -47,7 +47,7 @@ class TextureAnimation:
 			raise McMetagenException("Texture animation is missing 'animation' parameter")
 
 		# Parse root sequence
-		root = Sequence.from_json("", json["animation"], states.keys(), sequence_names)
+		root = Sequence.from_json("", json["animation"], states.keys(), sequence_names, texture_animations)
 		root.post_init(sequences)
 
 		return TextureAnimation(name, root, states, sequences)
@@ -138,11 +138,11 @@ class Sequence:
 	fixed_duration: int = field(default=None,init=False) # Duration of the sequence unaffected by weight. Can be thought of as a 'minimum' duration
 
 	@classmethod
-	def from_json(cls, name: str, json: List[dict], state_names: List[str], sequence_names: List[str]) -> Sequence:
+	def from_json(cls, name: str, json: List[dict], state_names: List[str], sequence_names: List[str], texture_animations: Dict[str,TextureAnimation]) -> Sequence:
 		total_weight = 0
 		entries = []
 		for entry_json in json:
-			entry = SequenceEntry.from_json(entry_json)
+			entry = SequenceEntry.from_json(entry_json, texture_animations)
 			entry.validate_reference(name, state_names, sequence_names)
 			total_weight += entry.weight
 			entries.append(entry)
@@ -257,7 +257,7 @@ class SequenceEntry:
 		return self.weight > 0
 
 	@classmethod
-	def from_json(cls, json: Dict) -> SequenceEntry:
+	def from_json(cls, json: Dict, texture_animations: Dict[str,TextureAnimation]) -> SequenceEntry:
 		if str(SequenceEntryType.SEQUENCE) in json:
 			type = SequenceEntryType.SEQUENCE
 			ref = json[str(SequenceEntryType.SEQUENCE)]
@@ -270,9 +270,15 @@ class SequenceEntry:
 		repeat = json.get("repeat", 1)
 		duration = json.get("duration", 1)
 		weight = json.get("weight", 0)
-		start = json.get("start")
-		end = json.get("end")
 		mark = json.get("mark")
+		
+		# Evaluate start/end expressions
+		start = json.get("start")
+		if start:
+			start = SequenceEntry.evaluate_expr(str(start), texture_animations = texture_animations)
+		end = json.get("end")
+		if end:
+			end = SequenceEntry.evaluate_expr(str(end), texture_animations = texture_animations)
 
 		return SequenceEntry(type, ref, repeat, duration, weight, start, end, mark)
 
@@ -302,6 +308,16 @@ class SequenceEntry:
 
 		return fixed_duration
 
+	@classmethod
+	def evaluate_expr(cls, expr:str, variables: Dict = dict(), texture_animations: Dict = dict()) -> int:
+		expression_globals.update(texture_animations)
+		try:
+			evaluated = eval(expr, expression_globals, variables)
+			evaluated = int(evaluated)
+		except TypeError:
+			raise McMetagenException(f"Expression must be a number, but is '{type(evaluated)}'")
+		return evaluated
+
 class SequenceEntryType(Enum):
 	STATE = 1
 	SEQUENCE = 2
@@ -315,3 +331,41 @@ class InvalidReferenceException(McMetagenException):
 			super(InvalidReferenceException, self).__init__(f"Reference '{ref_target}' in sequence '{parent_sequence}' does not name a state")
 		elif ref_type == SequenceEntryType.SEQUENCE:
 			super(InvalidReferenceException, self).__init__(f"Reference '{ref_target}' in sequence '{parent_sequence}' does not name a sequence")
+
+######################
+# Expression parsing #
+######################
+
+expression_globals = {
+	# Constants
+	"e": math.e,
+	"pi": math.pi,
+
+	# Trigonometry
+	"deg": math.degrees,
+	"rad": math.radians,
+	"sin": math.sin,
+	"sinh": math.sinh,
+	"asinh": math.asin,
+	"asinh": math.asinh,
+	"cos": math.cos,
+	"cosh": math.cosh,
+	"acos": math.acos,
+	"acosh": math.acosh,
+	"tan": math.tan,
+	"tanh": math.tanh,
+	"atan": math.atan,
+	"atan2": math.atan2,
+	"atanh": math.atanh,
+
+	# Math
+	"pow": math.pow,
+	"mod": math.fmod,
+	"log": math.log,
+	"sqrt": math.sqrt,
+	"exp": math.exp,
+	"factorial": math.factorial,
+	"ceil": math.ceil,
+	"floor": math.floor,
+	"gcd": math.gcd,
+}

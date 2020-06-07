@@ -1,8 +1,8 @@
 import pytest
 from mcmetagen.TextureAnimation import *
 
-def assert_animation(json: Dict, expected: AnimatedGroup):
-	parsedTextureAnimation = TextureAnimation.from_json("root",json)
+def assert_animation(json: Dict, expected: AnimatedGroup, texture_animations: Dict[str,TextureAnimation] = dict()):
+	parsedTextureAnimation = TextureAnimation.from_json("root",json, texture_animations)
 	assert expected == parsedTextureAnimation.animation
 
 def assert_exception(json: Dict, exception_type, message: Optional[str] = None):
@@ -96,7 +96,7 @@ class TestMarks:
 			}
 		)
 
-class TestBasicExpressions:
+class TestBasicExpr:
 	def test_basic_end_expr(self):
 		assert_animation(
 			{
@@ -250,17 +250,87 @@ class TestBasicExpressions:
 			McMetagenException, "there is no previous entry"
 		)
 
-ta1 = TextureAnimation.from_json("ta1",
-	{
-		"states": ["a", "b", "c"],
-		"sequences": {
-			"seq_a": [
-				{ "state": "a", "duration": 5, "mark": "in seq_a" }
-			]
-		},
-		"animation": [
-			{ "sequence": "seq_a"},
-			{ "sequence": "seq_a"}
-		]
+class TestArtihmeticExpr:
+	def test_basic_arithmetic_expr(self):
+		assert_animation(
+			{
+				"states": ["a","b","c"],
+				"animation": [
+					{ "state": "a"},
+					{ "state": "b", "start": "(4*5)/2 + 12" },
+					{ "state": "c", "end": "10*10*(2-1)" }
+				]
+			},
+			AnimatedGroup(0,100,"", [
+				AnimatedState(0,22,0),
+				AnimatedState(22,23,1),
+				AnimatedState(23,100,2)
+			])
+		)
+
+	def test_expr_with_arithmetic_functions(self):
+		assert_animation(
+			{
+				"states": ["a","b","c"],
+				"animation": [
+					{ "state": "a", "end": "ceil(30/4)" },
+					{ "state": "b", "end": "floor(45/4)" },
+					{ "state": "c", "end": "pow(3,3)" },
+					{ "state": "a", "end": "mod(230,100)" },
+				]
+			},
+			AnimatedGroup(0,30,"", [
+				AnimatedState(0,8,0),
+				AnimatedState(8,11,1),
+				AnimatedState(11,27,2),
+				AnimatedState(27,30,0)
+			])
+		)
+
+	def test_expr_with_trigonometry(self):
+		assert_animation(
+			{
+				"states": ["a","b","c"],
+				"animation": [
+					{ "state": "a", "end": "10*sin(rad(20))" }
+				]
+			},
+			AnimatedGroup(0,3,"", [
+				AnimatedState(0,3,0)
+			])
+		)
+
+class TestComplexExpr:
+	texture_animations = {
+		"ta1": TextureAnimation.from_json("ta1",
+			{
+				"states": ["a", "b", "c"],
+				"sequences": {
+					"seq_a": [
+						{ "state": "a", "duration": 5, "mark": "in seq_a" }
+					],
+					"seq_b": [
+						{ "state": "b", "duration": 5, "mark": "in seq_b" }
+					]
+				},
+				"animation": [
+					{ "sequence": "seq_a", "mark": "seq_a"},
+					{ "sequence": "seq_b", "mark": "seq_b"}
+				]
+			}
+		)
 	}
-)
+
+	def test_basic_reference(self):
+		assert_animation(
+			{
+				"states": ["a","b","c"],
+				"animation": [
+					{ "state": "a", "end": "ta1.mark('seq_b').end" }
+				]
+			},
+			AnimatedGroup(0,10,"", [
+				AnimatedState(0,10,0)
+			]),
+			self.texture_animations
+		)
