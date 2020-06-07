@@ -17,9 +17,11 @@ class TextureAnimation:
 	animation: AnimatedGroup
 	marks: Dict[str,AnimationMark]
 	constants: Dict[str, Any]
+	texture: Optional(str)
 
-	def __init__(self, name:str, root_sequence:Sequence, states: Dict[str,State], sequences: Dict[str,Sequence], constants: Dict[str, Any]):
+	def __init__(self, name:str, root_sequence:Sequence, states: Dict[str,State], texture:str = None, sequences: Dict[str,Sequence] = [], constants: Dict[str, Any] = dict()):
 		self.name = name
+		self.texture = texture
 		self.states = states
 		self.sequences = sequences
 		self.root_sequence = root_sequence
@@ -34,6 +36,8 @@ class TextureAnimation:
 		if "constants" in json:
 			for name, expr in json.get("constants", {}).items():
 				constants[name] = evaluate_expr(str(expr), {**texture_animations, **constants})		
+
+		texture = json.get("texture")
 		
 		# Parse states
 		if not "states" in json:
@@ -58,7 +62,7 @@ class TextureAnimation:
 		root = Sequence.from_json("", json["animation"], states.keys(), sequence_names, {**texture_animations, **constants})
 		root.post_init(sequences)
 
-		return TextureAnimation(name, root, states, sequences, constants)
+		return TextureAnimation(name, root, states, texture, sequences, constants)
 
 	def mark(self, mark_name:str, index:int = 0):
 		if not mark_name in self.marks:
