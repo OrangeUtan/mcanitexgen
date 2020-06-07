@@ -17,11 +17,14 @@ def assert_marks(json: Dict, expected: Dict[str, AnimationMark]):
 	parsedTextureAnimation = TextureAnimation.from_json("root",json)
 	assert expected == parsedTextureAnimation.marks
 
-def assert_expr_evaluation(expr:str, expected:Any, variables=dict(), texture_animations=dict()):
-	assert expected == SequenceEntry.evaluate_expr(expr, variables, texture_animations)
+def assert_constants(json: Dict, expected: Dict[str, Any]):
+	parsedTextureAnimation = TextureAnimation.from_json("root",json)
+	assert expected == parsedTextureAnimation.constants
+
+def assert_expr_evaluation(expr:str, expected:Any, expr_locals: Dict[str,Any] = dict()):
+	assert expected == evaluate_expr(expr, expr_locals)
 
 class TestMarks:
-
 	def test_marks_in_state_and_sequence(self):
 		assert_marks(
 			{
@@ -126,6 +129,69 @@ class TestArithmeticExpressions:
 	def test_trigonometry(self):
 		assert_expr_evaluation("sin(pi)", pytest.approx(0))
 		assert_expr_evaluation("cos(0)", 1)
+
+class TestVariables:
+	def test_basic(self):
+		assert_constants(
+			{
+				"constants": {
+					"x": "(4+5)-(1+2+3)",
+					"y": "pow(3,3)"
+				},
+				"states": ["a", "b", "c"],
+				"animation": [
+					{ "state": "a", "duration": 10 }
+				]
+			},
+			{
+				"x": 3,
+				"y": 27
+			}
+		)
+
+	def test_reference_const_in_const(self):
+		assert_constants(
+			{
+				"constants": {
+					"x": "pow(3,3)",
+					"y": "x*2"
+				},
+				"states": ["a", "b", "c"],
+				"animation": [
+					{ "state": "a", "duration": 10 }
+				]
+			},
+			{
+				"x": 27,
+				"y": 54
+			}
+		)
+
+	def test_reference_const_in_sequence(self):
+		assert_animation(
+			{
+				"constants": {
+					"seq_a_duration": 20,
+					"state_a": 42
+				},
+				"states": ["a","b","c"],
+				"sequences": {
+					"seq_a": [
+						{ "state": "b", "weight": 1 },
+					]
+				},
+				"animation": [
+					{ "state": "a", "end": "state_a" },
+					{ "sequence": "seq_a", "duration": "seq_a_duration" }
+				]
+			},
+			AnimatedGroup(0,62,"", [
+				AnimatedState(0,42,0),
+				AnimatedGroup(42,62,"seq_a",[
+					AnimatedState(42,62,1)
+				])
+			])
+		)
 
 class TestEndExpr:
 	texture_animations = {

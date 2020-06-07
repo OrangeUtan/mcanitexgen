@@ -16,17 +16,25 @@ class TextureAnimation:
 	sequences: Dict[str,Sequence]
 	animation: AnimatedGroup
 	marks: Dict[str,AnimationMark]
+	constants: Dict[str, Any]
 
-	def __init__(self, name:str, root_sequence:Sequence, states: Dict[str,State], sequences: Dict[str,Sequence]):
+	def __init__(self, name:str, root_sequence:Sequence, states: Dict[str,State], sequences: Dict[str,Sequence], constants: Dict[str, Any]):
 		self.name = name
 		self.states = states
 		self.sequences = sequences
 		self.root_sequence = root_sequence
 		self.marks = dict()
+		self.constants = constants
 		self.animation = root_sequence.to_animation(0, 0, self)
 
 	@classmethod
 	def from_json(cls, name:str, json: dict, texture_animations: Dict[str,TextureAnimation] = dict()) -> TextureAnimation:
+		# Parse constants
+		constants = dict()
+		if "constants" in json:
+			for name, expr in json.get("constants", {}).items():
+				constants[name] = evaluate_expr(str(expr), {**texture_animations, **constants})		
+		
 		# Parse states
 		if not "states" in json:
 			raise McMetagenException("Texture animation is missing 'states' parameter")
@@ -36,7 +44,7 @@ class TextureAnimation:
 		sequence_names = json.get("sequences", {}).keys()
 		sequences = dict()
 		for name,entries in json.get("sequences", {}).items():
-			sequence = Sequence.from_json(name, entries, states.keys(), sequence_names, texture_animations)
+			sequence = Sequence.from_json(name, entries, states.keys(), sequence_names, {**texture_animations, **constants})
 			sequences[name] = sequence
 
 		# Post init sequences
@@ -47,10 +55,10 @@ class TextureAnimation:
 			raise McMetagenException("Texture animation is missing 'animation' parameter")
 
 		# Parse root sequence
-		root = Sequence.from_json("", json["animation"], states.keys(), sequence_names, texture_animations)
+		root = Sequence.from_json("", json["animation"], states.keys(), sequence_names, {**texture_animations, **constants})
 		root.post_init(sequences)
 
-		return TextureAnimation(name, root, states, sequences)
+		return TextureAnimation(name, root, states, sequences, constants)
 
 	def mark(self, mark_name:str, index:int = 0):
 		if not mark_name in self.marks:
@@ -138,11 +146,11 @@ class Sequence:
 	fixed_duration: int = field(default=None,init=False) # Duration of the sequence unaffected by weight. Can be thought of as a 'minimum' duration
 
 	@classmethod
-	def from_json(cls, name: str, json: List[dict], state_names: List[str], sequence_names: List[str], texture_animations: Dict[str,TextureAnimation]) -> Sequence:
+	def from_json(cls, name: str, json: List[dict], state_names: List[str], sequence_names: List[str], expr_locals: Dict[str, Any]) -> Sequence:
 		total_weight = 0
 		entries = []
 		for entry_json in json:
-			entry = SequenceEntry.from_json(entry_json, texture_animations)
+			entry = SequenceEntry.from_json(entry_json, expr_locals)
 			entry.validate_reference(name, state_names, sequence_names)
 			total_weight += entry.weight
 			entries.append(entry)
@@ -257,7 +265,7 @@ class SequenceEntry:
 		return self.weight > 0
 
 	@classmethod
-	def from_json(cls, json: Dict, texture_animations: Dict[str,TextureAnimation]) -> SequenceEntry:
+	def from_json(cls, json: Dict, expr_locals: Dict[str,Any]) -> SequenceEntry:
 		if str(SequenceEntryType.SEQUENCE) in json:
 			type = SequenceEntryType.SEQUENCE
 			ref = json[str(SequenceEntryType.SEQUENCE)]
@@ -273,13 +281,13 @@ class SequenceEntry:
 		
 		# Evaluate expressions
 		try:
-			duration = int(SequenceEntry.evaluate_expr(str(json.get("duration", 1)), texture_animations))
+			duration = int(evaluate_expr(str(json.get("duration", 1)), expr_locals))
 			start = json.get("start")
 			if start:
-				start = int(SequenceEntry.evaluate_expr(str(start), texture_animations = texture_animations))
+				start = int(evaluate_expr(str(start), expr_locals))
 			end = json.get("end")
 			if end:
-				end = int(SequenceEntry.evaluate_expr(str(end), texture_animations = texture_animations))
+				end = int(evaluate_expr(str(end), expr_locals))
 		except TypeError:
 			raise McMetagenException(f"Expression must be a number")
 
@@ -311,11 +319,6 @@ class SequenceEntry:
 
 		return fixed_duration
 
-	@classmethod
-	def evaluate_expr(cls, expr:str, variables: Dict = dict(), texture_animations: Dict = dict()) -> Any:
-		expression_globals.update(texture_animations)
-		return eval(expr, expression_globals, variables)
-
 class SequenceEntryType(Enum):
 	STATE = 1
 	SEQUENCE = 2
@@ -333,6 +336,9 @@ class InvalidReferenceException(McMetagenException):
 ######################
 # Expression parsing #
 ######################
+
+def evaluate_expr(expr:str, expr_locals: Dict = dict()) -> Any:
+	return eval(expr, expression_globals, expr_locals)
 
 expression_globals = {
 	# Constants
