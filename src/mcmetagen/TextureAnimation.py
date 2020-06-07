@@ -14,11 +14,13 @@ class TextureAnimation:
 	states: Dict[str,State]
 	sequences: Dict[str,Sequence]
 	animation: AnimatedGroup
+	marks: Dict[str,AnimationMark]
 
 	def __init__(self, root_sequence:Sequence, states: Dict[str,State], sequences: Dict[str,Sequence]):
 		self.states = states
 		self.sequences = sequences
 		self.root_sequence = root_sequence
+		self.marks = dict()
 		self.animation = root_sequence.to_animation(0, 0, self)
 
 	@classmethod
@@ -47,6 +49,13 @@ class TextureAnimation:
 		root.post_init(sequences)
 
 		return TextureAnimation(root, states, sequences)
+
+		
+	def add_mark(self, name:str, mark: AnimationMark):
+		if not name in self.marks:
+			self.marks[name] = [mark]
+		else:
+			self.marks[name].append(mark)
 
 @dataclass
 class AnimatedEntry:
@@ -81,6 +90,11 @@ class AnimatedState(AnimatedEntry):
 	def __init__(self, start:int, end:int, index:int):
 		super(AnimatedState, self).__init__(start,end)
 		self.index = index
+
+@dataclass
+class AnimationMark:
+	start: int
+	end: int
 
 @dataclass
 class State:
@@ -208,6 +222,10 @@ class Sequence:
 				if animatedEntries:
 					animatedEntries[-1].end = animatedEntry.start
 
+				# Add mark if any
+				if entry.mark:
+					textureAnimation.add_mark(entry.mark, AnimationMark(animatedEntry.start, animatedEntry.end))
+
 				# Add entry
 				animatedEntries.append(animatedEntry)
 				currentTime = animatedEntry.end
@@ -225,6 +243,7 @@ class SequenceEntry:
 	weight: int = 0
 	start: Optional(str) = None
 	end: Optional(str) = None
+	mark: Optional(str) = None
 
 	@property
 	def has_weight(self) -> bool:
@@ -247,8 +266,9 @@ class SequenceEntry:
 		weight = json.get("weight", 0)
 		start = json.get("start")
 		end = json.get("end")
+		mark = json.get("mark")
 
-		return SequenceEntry(type, ref, repeat, duration, weight, start, end)
+		return SequenceEntry(type, ref, repeat, duration, weight, start, end, mark)
 
 	def to_animated_entry(self, start:int, duration:int, textureAnimation: TextureAnimation) -> AnimatedEntry:
 		if self.type == SequenceEntryType.STATE:
