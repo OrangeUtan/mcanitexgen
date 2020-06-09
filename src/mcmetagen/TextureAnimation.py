@@ -9,23 +9,20 @@ from mcmetagen.Utils import *
 
 @dataclass
 class TextureAnimation:
-
 	name: str
 	root_sequence: Sequence
 	states: Dict[str,State]
-	sequences: Dict[str,Sequence]
-	animation: AnimatedGroup
-	marks: Dict[str,AnimationMark]
-	constants: Dict[str, Any]
 
-	def __init__(self, name:str, root_sequence:Sequence, states: Dict[str,State], sequences: Dict[str,Sequence], constants: Dict[str, Any]):
-		self.name = name
-		self.states = states
-		self.sequences = sequences
-		self.root_sequence = root_sequence
-		self.marks = dict()
-		self.constants = constants
-		self.animation = root_sequence.to_animation(0, 0, self)
+	sequences: Dict[str,Sequence] = field(default_factory=list)
+	constants: Dict[str, Any] = field(default_factory=dict)
+	texture: Optional(str) = None
+	interpolate: bool = False
+
+	animation: AnimatedGroup = field(init=False)
+	marks: Dict[str,AnimationMark] = field(init=False, default_factory=dict)
+
+	def __post_init__(self):
+		self.animation = self.root_sequence.to_animation(0, 0, self)
 
 	@classmethod
 	def from_json(cls, name:str, json: dict, texture_animations: Dict[str,TextureAnimation] = dict()) -> TextureAnimation:
@@ -34,6 +31,9 @@ class TextureAnimation:
 		if "constants" in json:
 			for name, expr in json.get("constants", {}).items():
 				constants[name] = evaluate_expr(str(expr), {**texture_animations, **constants})		
+
+		texture = json.get("texture")
+		interpolate = json.get("interpolate",False)
 		
 		# Parse states
 		if not "states" in json:
@@ -58,7 +58,7 @@ class TextureAnimation:
 		root = Sequence.from_json("", json["animation"], states.keys(), sequence_names, {**texture_animations, **constants})
 		root.post_init(sequences)
 
-		return TextureAnimation(name, root, states, sequences, constants)
+		return TextureAnimation(name, root_sequence=root, states=states, texture=texture, interpolate=interpolate, sequences=sequences, constants=constants)
 
 	def mark(self, mark_name:str, index:int = 0):
 		if not mark_name in self.marks:
@@ -97,6 +97,11 @@ class AnimatedGroup(AnimatedEntry):
 		self.name = name
 		self.entries = entries
 
+	def to_frames(self) -> Geneartor[Dict, None, None]:
+		for entry in self.entries:
+			for frame in entry.to_frames():
+				yield frame
+
 @dataclass
 class AnimatedState(AnimatedEntry):
 	index: int
@@ -104,6 +109,9 @@ class AnimatedState(AnimatedEntry):
 	def __init__(self, start:int, end:int, index:int):
 		super(AnimatedState, self).__init__(start,end)
 		self.index = index
+
+	def to_frames(self) -> Generator[Dict, None, None]:
+		yield {"index": self.index, "time": self.duration}
 
 @dataclass
 class AnimationMark:
@@ -278,18 +286,21 @@ class SequenceEntry:
 		repeat = json.get("repeat", 1)
 		weight = json.get("weight", 0)
 		mark = json.get("mark")
-		
-		# Evaluate expressions
+
 		try:
 			duration = int(evaluate_expr(str(json.get("duration", 1)), expr_locals))
-			start = json.get("start")
-			if start:
-				start = int(evaluate_expr(str(start), expr_locals))
-			end = json.get("end")
-			if end:
-				end = int(evaluate_expr(str(end), expr_locals))
-		except TypeError:
-			raise McMetagenException(f"Expression must be a number")
+		except Exception as e:
+			raise McMetagenException(f"Error while evaluating 'duration'") from e
+		
+		try:
+			start = int(evaluate_expr(str(json.get('start')), expr_locals)) if 'start' in json else None
+		except Exception as e:
+			raise McMetagenException(f"Error while evaluating 'start'") from e
+				
+		try:
+			end = int(evaluate_expr(str(json.get('end')), expr_locals)) if 'end' in json else None
+		except Exception as e:
+			raise McMetagenException(f"Error while evaluating 'end'") from e
 
 		return SequenceEntry(type, ref, repeat, duration, weight, start, end, mark)
 
