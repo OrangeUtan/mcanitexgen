@@ -1,1 +1,2 @@
-from mcmetagen.TextureAnimation import TextureAnimation, AnimatedEntry, AnimatedGroup, AnimatedState
+from mcmetagen.TextureAnimation import TextureAnimation
+from mcmetagen.Parser import Parser
