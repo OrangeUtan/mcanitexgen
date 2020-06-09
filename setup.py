@@ -12,8 +12,11 @@ setup(
 	long_description=long_description,
 	long_description_content_type="text/markdown",
 	url="https://github.com/OrangeUtan/mcanitexgen",
-	package_dir={'': 'src'},
-	packages=["mcanitexgen"],
+	packages=[
+		'mcanitexgen'
+	],
+	package_dir={'mcanitexgen': 'mcanitexgen'},
+	include_package_data=True,
 	classifiers=[
 		"Programming Language :: Python :: 3",
 		"Programming Language :: Python :: 3.6",
