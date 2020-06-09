@@ -97,6 +97,11 @@ class AnimatedGroup(AnimatedEntry):
 		self.name = name
 		self.entries = entries
 
+	def to_frames(self) -> Geneartor[Dict, None, None]:
+		for entry in self.entries:
+			for frame in entry.to_frames():
+				yield frame
+
 @dataclass
 class AnimatedState(AnimatedEntry):
 	index: int
@@ -104,6 +109,9 @@ class AnimatedState(AnimatedEntry):
 	def __init__(self, start:int, end:int, index:int):
 		super(AnimatedState, self).__init__(start,end)
 		self.index = index
+
+	def to_frames(self) -> Generator[Dict, None, None]:
+		yield {"index": self.index, "time": self.duration}
 
 @dataclass
 class AnimationMark:
