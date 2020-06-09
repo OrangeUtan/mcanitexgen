@@ -286,18 +286,21 @@ class SequenceEntry:
 		repeat = json.get("repeat", 1)
 		weight = json.get("weight", 0)
 		mark = json.get("mark")
-		
-		# Evaluate expressions
+
 		try:
 			duration = int(evaluate_expr(str(json.get("duration", 1)), expr_locals))
-			start = json.get("start")
-			if start:
-				start = int(evaluate_expr(str(start), expr_locals))
-			end = json.get("end")
-			if end:
-				end = int(evaluate_expr(str(end), expr_locals))
-		except TypeError:
-			raise McMetagenException(f"Expression must be a number")
+		except Exception as e:
+			raise McMetagenException(f"Error while evaluating 'duration'") from e
+		
+		try:
+			start = int(evaluate_expr(str(json.get('start')), expr_locals)) if 'start' in json else None
+		except Exception as e:
+			raise McMetagenException(f"Error while evaluating 'start'") from e
+				
+		try:
+			end = int(evaluate_expr(str(json.get('end')), expr_locals)) if 'end' in json else None
+		except Exception as e:
+			raise McMetagenException(f"Error while evaluating 'end'") from e
 
 		return SequenceEntry(type, ref, repeat, duration, weight, start, end, mark)
 
