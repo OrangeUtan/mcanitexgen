@@ -5,7 +5,7 @@ with open("README.md", "r") as file:
 
 setup(
 	name='mcmetagen',
-	version='0.0.2',
+	version='0.0.3',
 	author='OrangeUtan',
 	author_email='oran9eutan@gmail.com',
 	description='A texture animation generator for Minecraft .mcmeta files',
