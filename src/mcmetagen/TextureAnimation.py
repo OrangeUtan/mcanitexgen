@@ -9,25 +9,20 @@ from mcmetagen.Utils import *
 
 @dataclass
 class TextureAnimation:
-
 	name: str
 	root_sequence: Sequence
 	states: Dict[str,State]
-	sequences: Dict[str,Sequence]
-	animation: AnimatedGroup
-	marks: Dict[str,AnimationMark]
-	constants: Dict[str, Any]
-	texture: Optional(str)
 
-	def __init__(self, name:str, root_sequence:Sequence, states: Dict[str,State], texture:str = None, sequences: Dict[str,Sequence] = [], constants: Dict[str, Any] = dict()):
-		self.name = name
-		self.texture = texture
-		self.states = states
-		self.sequences = sequences
-		self.root_sequence = root_sequence
-		self.marks = dict()
-		self.constants = constants
-		self.animation = root_sequence.to_animation(0, 0, self)
+	sequences: Dict[str,Sequence] = field(default_factory=list)
+	constants: Dict[str, Any] = field(default_factory=dict)
+	texture: Optional(str) = None
+	interpolate: bool = False
+
+	animation: AnimatedGroup = field(init=False)
+	marks: Dict[str,AnimationMark] = field(init=False, default_factory=dict)
+
+	def __post_init__(self):
+		self.animation = self.root_sequence.to_animation(0, 0, self)
 
 	@classmethod
 	def from_json(cls, name:str, json: dict, texture_animations: Dict[str,TextureAnimation] = dict()) -> TextureAnimation:
@@ -38,6 +33,7 @@ class TextureAnimation:
 				constants[name] = evaluate_expr(str(expr), {**texture_animations, **constants})		
 
 		texture = json.get("texture")
+		interpolate = json.get("interpolate",False)
 		
 		# Parse states
 		if not "states" in json:
@@ -62,7 +58,7 @@ class TextureAnimation:
 		root = Sequence.from_json("", json["animation"], states.keys(), sequence_names, {**texture_animations, **constants})
 		root.post_init(sequences)
 
-		return TextureAnimation(name, root, states, texture, sequences, constants)
+		return TextureAnimation(name, root_sequence=root, states=states, texture=texture, interpolate=interpolate, sequences=sequences, constants=constants)
 
 	def mark(self, mark_name:str, index:int = 0):
 		if not mark_name in self.marks:
