@@ -1,7 +1,7 @@
 import os, json
 import ruamel.yaml as yaml
 from typing import List, Dict, Iterable
-from mcmetagen.TextureAnimation import *
+from mcanitexgen.TextureAnimation import *
 
 class Parser:
 	@classmethod

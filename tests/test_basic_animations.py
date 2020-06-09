@@ -1,6 +1,6 @@
 import pytest
-from mcmetagen.TextureAnimation import *
-from mcmetagen.Exceptions import *
+from mcanitexgen.TextureAnimation import *
+from mcanitexgen.Exceptions import *
 
 def assert_states(json: Dict, expected: Dict[str, AnimatedState]):
 	parsedTextureAnimation = TextureAnimation.from_json("root",json)
@@ -248,7 +248,7 @@ def test_pass_no_duration_to_weighted_sequences():
 				{ "sequence": "seq_a" } # <-- duration 1 not enough for weighted 2 entries
 			]
 		},
-		McMetagenException, "Duration of '1' exhausted"
+		MCAnitexgenException, "Duration of '1' exhausted"
 	)
 	assert_exception(
 		{
@@ -266,5 +266,5 @@ def test_pass_no_duration_to_weighted_sequences():
 				{ "sequence": "seq_a" } # <-- duration 1 not enough for weighted 2 entries
 			]
 		},
-		McMetagenException, "Sequence 'seq_a': Duration must be at least '20', but was '1'"
+		MCAnitexgenException, "Sequence 'seq_a': Duration must be at least '20', but was '1'"
 	)

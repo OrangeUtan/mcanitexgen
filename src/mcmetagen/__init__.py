@@ -1,2 +1,0 @@
-from mcmetagen.TextureAnimation import TextureAnimation
-from mcmetagen.Parser import Parser

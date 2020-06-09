@@ -4,8 +4,8 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Iterable, Any
 from enum import Enum
 import itertools
-from mcmetagen.Exceptions import *
-from mcmetagen.Utils import *
+from mcanitexgen.Exceptions import *
+from mcanitexgen.Utils import *
 
 @dataclass
 class TextureAnimation:
@@ -37,7 +37,7 @@ class TextureAnimation:
 		
 		# Parse states
 		if not "states" in json:
-			raise McMetagenException("Texture animation is missing 'states' parameter")
+			raise MCAnitexgenException("Texture animation is missing 'states' parameter")
 		states = {name:State(name, idx) for idx,name in enumerate(json["states"])}
 
 		# Parse sequences
@@ -52,7 +52,7 @@ class TextureAnimation:
 			sequence.post_init(sequences)
 
 		if not "animation" in json:
-			raise McMetagenException("Texture animation is missing 'animation' parameter")
+			raise MCAnitexgenException("Texture animation is missing 'animation' parameter")
 
 		# Parse root sequence
 		root = Sequence.from_json("", json["animation"], states.keys(), sequence_names, {**texture_animations, **constants})
@@ -62,7 +62,7 @@ class TextureAnimation:
 
 	def mark(self, mark_name:str, index:int = 0):
 		if not mark_name in self.marks:
-			raise McMetagenException(f"TextureAnimation '{self.name}' doesn't have mark '{mark_name}'")
+			raise MCAnitexgenException(f"TextureAnimation '{self.name}' doesn't have mark '{mark_name}'")
 		return self.marks[mark_name][index]
 		
 	def add_mark(self, name:str, mark: AnimationMark):
@@ -195,9 +195,9 @@ class Sequence:
 		# Are there any weighted entries
 		if self.is_weighted:
 			if duration == 0:
-				raise McMetagenException(f"Didn't pass duration to weighted sequence '{self.name}'")
+				raise MCAnitexgenException(f"Didn't pass duration to weighted sequence '{self.name}'")
 			if duration <= self.fixed_duration:
-				raise McMetagenException(f"Sequence '{self.name}': Duration must be at least '{self.fixed_duration}', but was '{duration}'")
+				raise MCAnitexgenException(f"Sequence '{self.name}': Duration must be at least '{self.fixed_duration}', but was '{duration}'")
 
 			# Calculate times for weighted entries
 			distributable_duration = duration-self.fixed_duration # Duration that can be distributed over the weighted entries
@@ -213,15 +213,15 @@ class Sequence:
 			# Entry has 'start' property
 			if entry.start:
 				if currentTime == 0:
-					raise McMetagenException(f"Sequence '{self.name}': {i+1}. entry can't start at '{entry.start}', because there is no previous entry")
+					raise MCAnitexgenException(f"Sequence '{self.name}': {i+1}. entry can't start at '{entry.start}', because there is no previous entry")
 				if currentTime > entry.start:
-					raise McMetagenException(f"Sequence '{self.name}': {i+1}. entry can't start at '{entry.start}', because of previous entry")
+					raise MCAnitexgenException(f"Sequence '{self.name}': {i+1}. entry can't start at '{entry.start}', because of previous entry")
 				currentTime = entry.start
 
 			# Entry has 'end' property
 			if entry.end:
 				if currentTime >= entry.end:
-					raise McMetagenException(f"Sequence '{self.name}': {i+1}. entry can't end at '{entry.end}', because of previous entry")
+					raise MCAnitexgenException(f"Sequence '{self.name}': {i+1}. entry can't end at '{entry.end}', because of previous entry")
 				entry_duration = entry.end - currentTime
 
 			# Get the durations of each repetition of the current entry.
@@ -235,7 +235,7 @@ class Sequence:
 
 			for repetition_duration in repetition_durations:
 				if repetition_duration <= 0:
-					raise McMetagenException(f"Sequence '{self.name}': Duration of '{distributable_duration}' exhausted while trying to distribute it over entries")
+					raise MCAnitexgenException(f"Sequence '{self.name}': Duration of '{distributable_duration}' exhausted while trying to distribute it over entries")
 
 				# Convert to AnimatedEntry
 				animatedEntry = entry.to_animated_entry(currentTime, repetition_duration, textureAnimation)
@@ -281,7 +281,7 @@ class SequenceEntry:
 			type = SequenceEntryType.STATE
 			ref = json[str(SequenceEntryType.STATE)]
 		else:
-			raise McMetagenException("Sequence entry is missing reference to state or sequence")
+			raise MCAnitexgenException("Sequence entry is missing reference to state or sequence")
 
 		repeat = json.get("repeat", 1)
 		weight = json.get("weight", 0)
@@ -290,17 +290,17 @@ class SequenceEntry:
 		try:
 			duration = int(evaluate_expr(str(json.get("duration", 1)), expr_locals))
 		except Exception as e:
-			raise McMetagenException(f"Error while evaluating 'duration'") from e
+			raise MCAnitexgenException(f"Error while evaluating 'duration'") from e
 		
 		try:
 			start = int(evaluate_expr(str(json.get('start')), expr_locals)) if 'start' in json else None
 		except Exception as e:
-			raise McMetagenException(f"Error while evaluating 'start'") from e
+			raise MCAnitexgenException(f"Error while evaluating 'start'") from e
 				
 		try:
 			end = int(evaluate_expr(str(json.get('end')), expr_locals)) if 'end' in json else None
 		except Exception as e:
-			raise McMetagenException(f"Error while evaluating 'end'") from e
+			raise MCAnitexgenException(f"Error while evaluating 'end'") from e
 
 		return SequenceEntry(type, ref, repeat, duration, weight, start, end, mark)
 
@@ -337,7 +337,7 @@ class SequenceEntryType(Enum):
 	def __str__(self) -> str:
 		return self.name.lower()
 
-class InvalidReferenceException(McMetagenException):
+class InvalidReferenceException(MCAnitexgenException):
 	def __init__(self, parent_sequence: str, ref_target: str, ref_type: SequenceEntryType):
 		if ref_type == SequenceEntryType.STATE:
 			super(InvalidReferenceException, self).__init__(f"Reference '{ref_target}' in sequence '{parent_sequence}' does not name a state")

@@ -1,6 +1,6 @@
 import pytest
 from typing import Any
-from mcmetagen.TextureAnimation import *
+from mcanitexgen.TextureAnimation import *
 
 def assert_animation(json: Dict, expected: AnimatedGroup, texture_animations: Dict[str,TextureAnimation] = dict()):
 	parsedTextureAnimation = TextureAnimation.from_json("root",json, texture_animations)
@@ -276,7 +276,7 @@ class TestEndExpr:
 					{ "state": "a", "duration": 5 }
 				]
 			},
-			McMetagenException, "Sequence '': 2. entry can't end at '95'"
+			MCAnitexgenException, "Sequence '': 2. entry can't end at '95'"
 		)
 
 	def test_already_reached_nested(self):
@@ -294,7 +294,7 @@ class TestEndExpr:
 					{ "state": "a", "duration": 5 }
 				]
 			},
-			McMetagenException, "Sequence 'seq_a': 1. entry can't end at '95'"
+			MCAnitexgenException, "Sequence 'seq_a': 1. entry can't end at '95'"
 		)
 
 	def test_with_mark_reference(self):
@@ -369,7 +369,7 @@ class TestStartExpr:
 					{ "state": "a", "duration": 5 }
 				]
 			},
-			McMetagenException, "there is no previous entry"
+			MCAnitexgenException, "there is no previous entry"
 		)
 
 	def test_with_no_previous_entry_nested(self):
@@ -386,7 +386,7 @@ class TestStartExpr:
 					{ "state": "a", "duration": 5 }
 				]
 			},
-			McMetagenException, "there is no previous entry"
+			MCAnitexgenException, "there is no previous entry"
 		)
 
 class TestDurationExpr:
