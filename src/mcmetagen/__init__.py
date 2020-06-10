@@ -1,1 +1,0 @@
-from mcmetagen.TextureAnimation import TextureAnimation, AnimatedEntry, AnimatedGroup, AnimatedState

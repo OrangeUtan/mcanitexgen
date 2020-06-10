@@ -1,0 +1,2 @@
+class MCAnitexgenException(Exception):
+	pass
