@@ -23,6 +23,7 @@ class TextureAnimation:
 
 	def __post_init__(self):
 		self.animation = self.root_sequence.to_animation(0, 0, self)
+		self.animation.validate()
 
 	@classmethod
 	def from_json(cls, name:str, json: dict, texture_animations: Dict[str,TextureAnimation] = dict()) -> TextureAnimation:
@@ -43,9 +44,9 @@ class TextureAnimation:
 		# Parse sequences
 		sequence_names = json.get("sequences", {}).keys()
 		sequences = dict()
-		for name,entries in json.get("sequences", {}).items():
-			sequence = Sequence.from_json(name, entries, states.keys(), sequence_names, {**texture_animations, **constants})
-			sequences[name] = sequence
+		for entry_name,entries in json.get("sequences", {}).items():
+			sequence = Sequence.from_json(entry_name, entries, states.keys(), sequence_names, {**texture_animations, **constants})
+			sequences[entry_name] = sequence
 
 		# Post init sequences
 		for sequence in sequences.values():
@@ -101,6 +102,22 @@ class AnimatedGroup(AnimatedEntry):
 		for entry in self.entries:
 			for frame in entry.to_frames():
 				yield frame
+	
+	def extend_until(self, time:int):
+		if self.end < time:
+			self.end = time
+			if self.entries:
+				self.entries[-1].extend_until(time)
+
+	def validate(self):
+		if self.entries:
+			if not self.start == self.entries[0].start:
+				raise MCAnitexgenException(f"AnimatedGroup does not start with its first entry: {self}'")
+			if not self.end == self.entries[-1].end:
+				raise MCAnitexgenException(f"AnimatedGroup does not end with its last entry: {self}'")
+
+			for entry in self.entries:
+				entry.validate()
 
 @dataclass
 class AnimatedState(AnimatedEntry):
@@ -112,6 +129,13 @@ class AnimatedState(AnimatedEntry):
 
 	def to_frames(self) -> Generator[Dict, None, None]:
 		yield {"index": self.index, "time": self.duration}
+
+	def extend_until(self, time:int):
+		if self.end < time:
+			self.end = time
+
+	def validate(self):
+		pass
 
 @dataclass
 class AnimationMark:
@@ -242,7 +266,7 @@ class Sequence:
 				
 				# Previous AnimatedEntry always has to end at the start of the new entry. Makes sure 'start' property can backpropagate
 				if animatedEntries:
-					animatedEntries[-1].end = animatedEntry.start
+					animatedEntries[-1].extend_until(animatedEntry.start)
 
 				# Add mark if any
 				if entry.mark:

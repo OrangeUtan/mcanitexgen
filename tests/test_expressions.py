@@ -389,6 +389,30 @@ class TestStartExpr:
 			MCAnitexgenException, "there is no previous entry"
 		)
 
+	def test_with_previous_is_group(self):
+		assert_animation(
+			{
+				"states": ["a","b","c"],
+				"sequences": {
+					"seq_a": [
+						{ "state": "a", "duration": 5 },
+						{ "state": "b", "duration": 5 }
+					]
+				},
+				"animation": [
+					{ "sequence": "seq_a"},
+					{ "state": "c", "start": "20", "duration": 5 }
+				]
+			},
+			AnimatedGroup(0,25,"", [
+				AnimatedGroup(0,20, "seq_a",[
+					AnimatedState(0,5,0),
+					AnimatedState(5,20,1)
+				]),
+				AnimatedState(20,25,2)
+			])
+		)
+
 class TestDurationExpr:
 	def test_basic_duration_expr(self):
 		assert_animation(
