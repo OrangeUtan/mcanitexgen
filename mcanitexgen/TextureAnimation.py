@@ -43,9 +43,9 @@ class TextureAnimation:
 		# Parse sequences
 		sequence_names = json.get("sequences", {}).keys()
 		sequences = dict()
-		for name,entries in json.get("sequences", {}).items():
-			sequence = Sequence.from_json(name, entries, states.keys(), sequence_names, {**texture_animations, **constants})
-			sequences[name] = sequence
+		for entry_name,entries in json.get("sequences", {}).items():
+			sequence = Sequence.from_json(entry_name, entries, states.keys(), sequence_names, {**texture_animations, **constants})
+			sequences[entry_name] = sequence
 
 		# Post init sequences
 		for sequence in sequences.values():
