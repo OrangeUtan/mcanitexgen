@@ -5,7 +5,7 @@ with open("README.md", "r") as file:
 
 setup(
 	name='mcanitexgen',
-	version='0.0.8',
+	version='0.0.9',
 	author='OrangeUtan',
 	author_email='oran9eutan@gmail.com',
 	description='A texture animation generator for Minecraft .mcmeta files',
