@@ -45,4 +45,4 @@ head:
 ```
 Mcanitexgen then generates the output "<rel_path>/head.png.mcmeta" which Minecraft uses to animate textures.<br>
 <br>
-More complex examples can be found in `/examples`.
+More complex examples can be found in [examples](https://github.com/OrangeUtan/mcanitexgen/tree/master/examples).
