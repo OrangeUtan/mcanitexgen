@@ -1,6 +1,7 @@
 # mcanitexgen (MC animated texture generator)
 Mcanitexgen is a python generator for complex animated textures. It generates .mcmeta files from .animation.yml files.<br>
-I use this for my personal projects to create animated Java models, like this one:<br>
+I use this for my personal projects to create animated Java models, like this one (long animation):<br>
+<br>
 <img src="examples/dog/dog.gif" width="300" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
 
 ## Install
