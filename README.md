@@ -32,4 +32,4 @@ head:
     - { state: normal, duration: 20 }
     - { state: wink_right, duration: 10 }
 ```
-Mcmetagen then generates an animation for the texture "<rel_path>/head.png" => The output is "<rel_path>/head.png.mcmeta".
+Mcanitexgen then generates an animation for the texture "<rel_path>/head.png" => The output is "<rel_path>/head.png.mcmeta".
