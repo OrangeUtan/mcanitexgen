@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Any, Dict, Iterable, List, Optional
 
 from mcanitexgen.Exceptions import *
-from mcanitexgen.Utils import *
+from mcanitexgen.utils import *
 
 
 @dataclass
