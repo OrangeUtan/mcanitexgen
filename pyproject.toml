@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "mcanitexgen"
+version = "0.0.9"
+description = "A texture animation generator for Minecraft .mcmeta files"
+authors = ["Oran9eUtan <oran9eutan@gmail.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+"ruamel.yaml" = "^0.16.12"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
