@@ -1,3 +1,4 @@
+import os
 import shutil
 from pathlib import Path
 
@@ -6,12 +7,17 @@ from invoke import task
 
 @task
 def setup(c):
-    c.run("poetry lock -n")
-    c.run("poetry install -n")
-    c.run("poetry run pre-commit install")
+    os.system("poetry lock -n")
+    os.system("poetry install -n")
+    os.system("poetry run pre-commit install")
 
 
 @task
 def format(c):
-    c.run("poetry run black . --config pyproject.toml")
-    c.run("poetry run isort . --settings-path pyproject.toml")
+    os.system("poetry run black . --config pyproject.toml")
+    os.system("poetry run isort . --settings-path pyproject.toml")
+
+
+@task
+def test(c):
+    os.system("poetry run py -m pytest")
