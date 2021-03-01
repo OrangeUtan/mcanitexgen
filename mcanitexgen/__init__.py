@@ -1,2 +1,2 @@
-from mcanitexgen.TextureAnimation import TextureAnimation
 from mcanitexgen.Parser import Parser
+from mcanitexgen.TextureAnimation import TextureAnimation
