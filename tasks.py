@@ -15,7 +15,8 @@ def setup(c):
 @task
 def format(c):
     os.system("poetry run black . --config pyproject.toml")
-    os.system("poetry run isort . --settings-path pyproject.toml")
+    os.system("poetry run isort mcanitexgen --settings-path pyproject.toml --profile black")
+    os.system("poetry run isort tests --settings-path pyproject.toml --profile black")
 
 
 @task
