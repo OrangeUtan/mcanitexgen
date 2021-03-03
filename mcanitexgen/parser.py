@@ -39,7 +39,7 @@ class TextureAnimation:
         for k, v in json.items():
             assert k.endswith("()")
             k = k.removesuffix("()")
-            sequences[k] = Sequence.from_json(k, v)
+            sequences[k] = Sequence.from_json(k, v, sequences)
 
         texture = Path(texture_path)
         return cls(texture.name.removesuffix(texture.suffix), texture, states, sequences)
@@ -60,24 +60,19 @@ class Sequence:
     actions: list[Action]
 
     @classmethod
-    def from_json(cls, name, json_actions: list[dict]):
-        return cls(name, [Action.from_json(a) for a in json_actions])
+    def from_json(cls, name, json_actions: list[dict], sequences: dict[str, Sequence]):
+        return cls(name, [Action.from_json(a, sequences) for a in json_actions])
 
     def __post_init__(self):
-        self._total_actions_weight = sum(map(lambda a: a.weight, self.actions))
+        self.total_weight = sum(self.weights())
 
     @property
     def is_weighted(self):
-        return self._total_actions_weight > 0
+        return self.total_weight > 0
 
-    def __len__(self):
-        return len(self.actions)
-
-    def __contains__(self, o: object):
-        return o in self.actions
-
-    def __iter__(self):
-        return iter(self.actions)
+    def weights(self):
+        """ Returns the weights of the weighted actions in this sequence """
+        return map(lambda a: a.weight, filter(lambda a: a.has_weight, self.actions))
 
 
 class Action(abc.ABC):
@@ -102,7 +97,7 @@ class Action(abc.ABC):
             raise ParserError(f"Actions defining an end can't define a duration")
 
     @classmethod
-    def from_json(cls, json: Union[dict, str]):
+    def from_json(cls, json: Union[dict, str], sequences: dict[str, Sequence]):
         if isinstance(json, str):
             reference, args = json, {}
         else:
@@ -119,7 +114,12 @@ class Action(abc.ABC):
 
         if cls.is_sequence_ref(reference):
             reference, repeat = cls.parse_sequence_ref(reference)
-            return SequenceAction(reference, repeat, start, end, mark, weight, duration)
+            if not reference in sequences:
+                raise ParserError(f"Sequence '{reference}' is not defined")
+
+            return SequenceAction(
+                sequences[reference], repeat, start, end, mark, weight, duration
+            )
         else:
             return StateAction(reference, start, end, mark, weight, duration)
 
@@ -144,7 +144,7 @@ class Action(abc.ABC):
 
 @dataclass(init=False)
 class StateAction(Action):
-    ref: str
+    state: str
     start: Optional[int]
     end: Optional[int]
     mark: Optional[str]
@@ -153,7 +153,7 @@ class StateAction(Action):
 
     def __init__(
         self,
-        ref: str,
+        state: str,
         start: Optional[int] = None,
         end: Optional[int] = None,
         mark: Optional[str] = None,
@@ -161,12 +161,12 @@ class StateAction(Action):
         duration: Optional[int] = None,
     ):
         super().__init__(start, end, mark, weight, duration)
-        self.ref = ref
+        self.state = state
 
 
 @dataclass(init=False)
 class SequenceAction(Action):
-    ref: str
+    sequence: Sequence
     repeat: int
     start: Optional[int]
     end: Optional[int]
@@ -176,7 +176,7 @@ class SequenceAction(Action):
 
     def __init__(
         self,
-        ref: str,
+        sequence: Sequence,
         repeat: int = 1,
         start: Optional[int] = None,
         end: Optional[int] = None,
@@ -185,7 +185,7 @@ class SequenceAction(Action):
         duration: Optional[int] = None,
     ):
         super().__init__(start, end, mark, weight, duration)
-        self.ref = ref
+        self.sequence = sequence
         self.repeat = repeat
 
         assert self.repeat >= 1
