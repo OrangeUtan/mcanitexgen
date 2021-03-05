@@ -20,7 +20,7 @@ class Test_FromJson:
     )
     def test(self, string, expected):
         json = yaml.safe_load(string)
-        seq = Sequence.from_json("abc", json, {})
+        seq = Sequence.from_json("abc", json)
 
         assert len(seq.actions) == len(expected.actions)
         for action, expected_action in zip(seq.actions, expected.actions):

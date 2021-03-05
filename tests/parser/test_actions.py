@@ -22,26 +22,22 @@ class Test_ParseSequenceRef:
 
 
 class Test_FromJson:
-    @pytest.fixture
-    def dummy_sequences(self):
-        return {"pop": Sequence("pop", [], 0), "b": Sequence("b", [], 0)}
-
     @pytest.mark.parametrize(
         "string,expected",
         [
             ("A_STATE", parser.StateAction("A_STATE")),
             ("A_STATE:", parser.StateAction("A_STATE")),
-            ("pop()", parser.SequenceAction(Sequence("pop", [], 0))),
-            ("pop():", parser.SequenceAction(Sequence("pop", [], 0))),
-            ("3 * pop()", parser.SequenceAction(Sequence("pop", [], 0), 3)),
-            ("3 * pop():", parser.SequenceAction(Sequence("pop", [], 0), 3)),
-            ("b()", parser.SequenceAction(Sequence("b", [], 0), 1)),
-            ("  b  (  )  ", parser.SequenceAction(Sequence("b", [], 0), 1)),
+            ("pop()", parser.SequenceAction("pop")),
+            ("pop():", parser.SequenceAction("pop")),
+            ("3 * pop()", parser.SequenceAction("pop", 3)),
+            ("3 * pop():", parser.SequenceAction("pop", 3)),
+            ("b()", parser.SequenceAction("b", 1)),
+            ("  b  (  )  ", parser.SequenceAction("b", 1)),
         ],
     )
-    def test_no_args(self, string, expected, dummy_sequences):
+    def test_no_args(self, string, expected):
         json = yaml.safe_load(string)
-        action = parser.Action.from_json(json, dummy_sequences)
+        action = parser.Action.from_json(json)
         assert type(action) == type(expected)
         assert action == expected
 
@@ -50,12 +46,12 @@ class Test_FromJson:
         [
             ("a: {duration : 10}", parser.StateAction("a", duration=10)),
             (" abc  : {duration: 10}", parser.StateAction("abc", duration=10)),
-            ("b(): {end: 10}", parser.SequenceAction(Sequence("b", [], 0), end=10)),
+            ("b(): {end: 10}", parser.SequenceAction("b", end=10)),
         ],
     )
-    def test_with_args(self, string, expected, dummy_sequences):
+    def test_with_args(self, string, expected):
         json = yaml.safe_load(string)
-        action = parser.Action.from_json(json, dummy_sequences)
+        action = parser.Action.from_json(json)
         assert type(action) == type(expected)
         assert action == expected
 

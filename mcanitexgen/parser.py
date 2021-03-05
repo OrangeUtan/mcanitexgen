@@ -39,7 +39,7 @@ class TextureAnimation:
         for k, v in json.items():
             assert k.endswith("()")
             k = k.removesuffix("()")
-            sequences[k] = Sequence.from_json(k, v, sequences)
+            sequences[k] = Sequence.from_json(k, v)
 
         texture = Path(texture_path)
         return cls(texture.name.removesuffix(texture.suffix), texture, states, sequences)
@@ -60,8 +60,8 @@ class Sequence:
     actions: list[Action]
 
     @classmethod
-    def from_json(cls, name, json_actions: list[dict], sequences: dict[str, Sequence]):
-        return cls(name, [Action.from_json(a, sequences) for a in json_actions])
+    def from_json(cls, name, json_actions: list[dict]):
+        return cls(name, [Action.from_json(a) for a in json_actions])
 
     def __post_init__(self):
         self.total_weight = sum(self.weights())
@@ -78,26 +78,26 @@ class Sequence:
 class Action(abc.ABC):
     def __init__(
         self,
-        start: Optional[int] = None,
-        end: Optional[int] = None,
+        start: Union[str, int, None] = None,
+        end: Union[str, int, None] = None,
         mark: Optional[str] = None,
         weight: int = 0,
-        duration: Optional[int] = None,
+        duration: Union[str, int, None] = None,
     ):
+        if weight and (start or end or duration):
+            raise ParserError(f"Actions defining a weight can't define start/end/duration")
+
+        if end and duration:
+            raise ParserError(f"Actions defining an end can't define a duration")
+
         self.start = start
         self.end = end
         self.mark = mark
         self.weight = weight
         self.duration = duration
 
-        if self.weight and (self.start or self.end or self.duration):
-            raise ParserError(f"Actions defining a weight can't define start/end/duration")
-
-        if self.end and self.duration:
-            raise ParserError(f"Actions defining an end can't define a duration")
-
     @classmethod
-    def from_json(cls, json: Union[dict, str], sequences: dict[str, Sequence]):
+    def from_json(cls, json: Union[dict, str]):
         if isinstance(json, str):
             reference, args = json, {}
         else:
@@ -106,20 +106,16 @@ class Action(abc.ABC):
                 args = {}
         reference = reference.replace(" ", "")
 
-        start = int(args["start"]) if "start" in args else None
-        end = int(args["end"]) if "end" in args else None
+        start = args["start"] if "start" in args else None
+        end = args["end"] if "end" in args else None
         mark = args.get("mark")
         weight = int(args.get("weight", 0))
-        duration = int(args["duration"]) if "duration" in args else None
+        duration = args["duration"] if "duration" in args else None
 
         if cls.is_sequence_ref(reference):
             reference, repeat = cls.parse_sequence_ref(reference)
-            if not reference in sequences:
-                raise ParserError(f"Sequence '{reference}' is not defined")
 
-            return SequenceAction(
-                sequences[reference], repeat, start, end, mark, weight, duration
-            )
+            return SequenceAction(reference, repeat, start, end, mark, weight, duration)
         else:
             return StateAction(reference, start, end, mark, weight, duration)
 
@@ -145,20 +141,20 @@ class Action(abc.ABC):
 @dataclass(init=False)
 class StateAction(Action):
     state: str
-    start: Optional[int]
-    end: Optional[int]
+    start: Union[str, int, None]
+    end: Union[str, int, None]
     mark: Optional[str]
     weight: int
-    duration: Optional[int]
+    duration: Union[str, int, None]
 
     def __init__(
         self,
         state: str,
-        start: Optional[int] = None,
-        end: Optional[int] = None,
+        start: Union[str, int, None] = None,
+        end: Union[str, int, None] = None,
         mark: Optional[str] = None,
         weight: int = 0,
-        duration: Optional[int] = None,
+        duration: Union[str, int, None] = None,
     ):
         super().__init__(start, end, mark, weight, duration)
         self.state = state
@@ -166,26 +162,26 @@ class StateAction(Action):
 
 @dataclass(init=False)
 class SequenceAction(Action):
-    sequence: Sequence
+    ref: str
     repeat: int
-    start: Optional[int]
-    end: Optional[int]
+    start: Union[str, int, None]
+    end: Union[str, int, None]
     mark: Optional[str]
     weight: int
-    duration: Optional[int]
+    duration: Union[str, int, None]
 
     def __init__(
         self,
-        sequence: Sequence,
+        ref: str,
         repeat: int = 1,
-        start: Optional[int] = None,
-        end: Optional[int] = None,
+        start: Union[str, int, None] = None,
+        end: Union[str, int, None] = None,
         mark: Optional[str] = None,
         weight: int = 0,
-        duration: Optional[int] = None,
+        duration: Union[str, int, None] = None,
     ):
         super().__init__(start, end, mark, weight, duration)
-        self.sequence = sequence
+        self.ref = ref
         self.repeat = repeat
 
         assert self.repeat >= 1
