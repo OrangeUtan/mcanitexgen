@@ -55,6 +55,13 @@ class Test_FromJson:
         assert type(action) == type(expected)
         assert action == expected
 
+    def test_forget_space_after_colon_in_args(self):
+        json = yaml.safe_load("a: {duration:100}")
+        # -> parses to {'duration:100': None} instead of {duration: 100}
+
+        with pytest.raises(parser.ParserError, match=".*action arguments.*"):
+            action = parser.Action.from_json(json)
+
 
 class Test_Init:
     @pytest.mark.parametrize(

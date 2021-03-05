@@ -103,17 +103,23 @@ class Action(abc.ABC):
     def from_json(cls, json: Union[dict, str]):
         if isinstance(json, str):
             reference, args = json, {}
-        else:
+        elif isinstance(json, dict):
             reference, args = json.popitem()
             if not args:
                 args = {}
+        else:
+            raise ParserError(f"'{json}' is not a valid action. Must either be str or dict")
+
         reference = reference.replace(" ", "")
 
-        start = args["start"] if "start" in args else None
-        end = args["end"] if "end" in args else None
-        mark = args.get("mark")
-        weight = int(args.get("weight", 0))
-        duration = args["duration"] if "duration" in args else None
+        start = args.pop("start") if "start" in args else None
+        end = args.pop("end") if "end" in args else None
+        mark = args.pop("mark") if "mark" in args else None
+        weight = int(args.pop("weight")) if "weight" in args else 0
+        duration = args.pop("duration") if "duration" in args else None
+
+        if len(args):
+            raise ParserError(f"Unknown action arguments: '{args}'")
 
         if cls.is_sequence_ref(reference):
             reference, repeat = cls.parse_sequence_ref(reference)
