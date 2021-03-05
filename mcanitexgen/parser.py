@@ -75,14 +75,17 @@ class Sequence:
         return map(lambda a: a.weight, filter(lambda a: a.has_weight, self.actions))
 
 
+IntExpression = Union[str, int]
+
+
 class Action(abc.ABC):
     def __init__(
         self,
-        start: Union[str, int, None] = None,
-        end: Union[str, int, None] = None,
+        start: Optional[IntExpression] = None,
+        end: Optional[IntExpression] = None,
         mark: Optional[str] = None,
         weight: int = 0,
-        duration: Union[str, int, None] = None,
+        duration: Optional[IntExpression] = None,
     ):
         if weight and (start or end or duration):
             raise ParserError(f"Actions defining a weight can't define start/end/duration")
@@ -141,20 +144,20 @@ class Action(abc.ABC):
 @dataclass(init=False)
 class StateAction(Action):
     state: str
-    start: Union[str, int, None]
-    end: Union[str, int, None]
+    start: Optional[IntExpression]
+    end: Optional[IntExpression]
     mark: Optional[str]
     weight: int
-    duration: Union[str, int, None]
+    duration: Optional[IntExpression]
 
     def __init__(
         self,
         state: str,
-        start: Union[str, int, None] = None,
-        end: Union[str, int, None] = None,
+        start: Optional[IntExpression] = None,
+        end: Optional[IntExpression] = None,
         mark: Optional[str] = None,
         weight: int = 0,
-        duration: Union[str, int, None] = None,
+        duration: Optional[IntExpression] = None,
     ):
         super().__init__(start, end, mark, weight, duration)
         self.state = state
@@ -164,21 +167,21 @@ class StateAction(Action):
 class SequenceAction(Action):
     ref: str
     repeat: int
-    start: Union[str, int, None]
-    end: Union[str, int, None]
+    start: Optional[IntExpression]
+    end: Optional[IntExpression]
     mark: Optional[str]
     weight: int
-    duration: Union[str, int, None]
+    duration: Optional[IntExpression]
 
     def __init__(
         self,
         ref: str,
         repeat: int = 1,
-        start: Union[str, int, None] = None,
-        end: Union[str, int, None] = None,
+        start: Optional[IntExpression] = None,
+        end: Optional[IntExpression] = None,
         mark: Optional[str] = None,
         weight: int = 0,
-        duration: Union[str, int, None] = None,
+        duration: Optional[IntExpression] = None,
     ):
         super().__init__(start, end, mark, weight, duration)
         self.ref = ref
