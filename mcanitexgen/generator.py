@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Iterator, Optional, Union
+from typing import Iterator, Optional
 
 from mcanitexgen import utils
 from mcanitexgen.expressions import evaluate_int
@@ -59,9 +59,7 @@ class AnimationContext:
                 constant_duration += action.duration
             elif isinstance(action, SequenceAction):
                 if action.duration:
-                    constant_duration += action.duration
-                else:
-                    self.get_constant_duration(self.get_sequence_by_ref(action.ref))
+                    constant_duration += action.repeat * action.duration
 
         return constant_duration
 
@@ -94,8 +92,6 @@ def animation_to_frames(
 
 
 def sequence_to_frames(seq: Sequence, ctx: AnimationContext, duration: Optional[int] = None):
-    print(seq.name)
-
     for action, action_duration in zip(seq.actions, get_action_durations(seq, duration)):
         start_time = ctx.end
 
@@ -158,8 +154,16 @@ def state_action_to_frames(action: StateAction, duration: int, ctx: AnimationCon
 
 def sequence_action_to_frames(action: SequenceAction, duration: int, ctx: AnimationContext):
     seq = ctx.get_sequence_by_ref(action.ref)
-    if duration:
-        duration = duration - ctx.get_constant_duration(seq)
 
-    for i in range(action.repeat):
-        sequence_to_frames(seq, ctx, duration)
+    if action.weight:
+        if duration:
+            duration -= action.repeat * ctx.get_constant_duration(seq)
+
+        for d in utils.partition_by_weights(duration, action.repeat, [1] * action.repeat):
+            sequence_to_frames(seq, ctx, d)
+    else:
+        if duration:
+            duration -= ctx.get_constant_duration(seq)
+
+        for i in range(action.repeat):
+            sequence_to_frames(seq, ctx, duration)
