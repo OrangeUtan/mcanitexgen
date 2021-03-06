@@ -72,7 +72,10 @@ class AnimationContext:
         return self.anim.sequences[ref]
 
     def evaluate_int_expr(self, expr: IntExpression):
-        return evaluate_int(expr, self._eval_locals)
+        try:
+            return evaluate_int(expr, self._eval_locals)
+        except Exception as e:
+            raise GeneratorError(f"Error while parsing expression: '{expr}'") from e
 
 
 @dataclass
@@ -96,24 +99,15 @@ def sequence_to_frames(seq: Sequence, ctx: AnimationContext, duration: Optional[
         start_time = ctx.end
 
         if action.start:
-            try:
-                start = ctx.evaluate_int_expr(action.start)
-            except Exception as e:
-                raise GeneratorError(f"Error while parsing start: '{action.start}'") from e
+            start = ctx.evaluate_int_expr(action.start)
             ctx.advance_time_to(start)
 
         if action.end:
-            try:
-                end = ctx.evaluate_int_expr(action.end)
-            except Exception as e:
-                raise GeneratorError(f"Error while parsing end: '{action.end}'") from e
+            end = ctx.evaluate_int_expr(action.end)
             action_duration = ctx.elapsed_time(end)
 
         if action_duration and not isinstance(action_duration, int):
-            try:
-                action_duration = ctx.evaluate_int_expr(action.duration)
-            except Exception as e:
-                raise GeneratorError(f"Error while parsing duration: '{action.end}'") from e
+            action_duration = ctx.evaluate_int_expr(action.duration)
 
         if isinstance(action, StateAction):
             if action_duration == None:
