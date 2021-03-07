@@ -2,7 +2,14 @@ import pytest
 import ruamel.yaml as yaml
 
 from mcanitexgen import parser
-from mcanitexgen.TextureAnimationOld import Sequence
+from mcanitexgen.parser import (
+    Action,
+    Duration,
+    ParserError,
+    SequenceAction,
+    StateAction,
+    Timeframe,
+)
 
 
 class Test_ParseSequenceRef:
@@ -16,7 +23,7 @@ class Test_ParseSequenceRef:
         ],
     )
     def test_parse_repeat(self, ref, expected_repeat, expected_ref):
-        reference, repeat = parser.Action.parse_sequence_ref(ref)
+        reference, repeat = parser.Action._parse_sequence_ref(ref)
         assert reference == expected_ref
         assert repeat == expected_repeat
 
@@ -25,14 +32,14 @@ class Test_FromJson:
     @pytest.mark.parametrize(
         "string,expected",
         [
-            ("A_STATE", parser.StateAction("A_STATE")),
-            ("A_STATE:", parser.StateAction("A_STATE")),
-            ("pop()", parser.SequenceAction("pop")),
-            ("pop():", parser.SequenceAction("pop")),
-            ("3 * pop()", parser.SequenceAction("pop", 3)),
-            ("3 * pop():", parser.SequenceAction("pop", 3)),
-            ("b()", parser.SequenceAction("b", 1)),
-            ("  b  (  )  ", parser.SequenceAction("b", 1)),
+            ("A_STATE", StateAction("A_STATE")),
+            ("A_STATE:", StateAction("A_STATE")),
+            ("pop()", SequenceAction("pop")),
+            ("pop():", SequenceAction("pop")),
+            ("3 * pop()", SequenceAction("pop", repeat=3)),
+            ("3 * pop():", SequenceAction("pop", repeat=3)),
+            ("b()", SequenceAction("b", repeat=1)),
+            ("  b  (  )  ", SequenceAction("b", repeat=1)),
         ],
     )
     def test_no_args(self, string, expected):
@@ -44,9 +51,9 @@ class Test_FromJson:
     @pytest.mark.parametrize(
         "string,expected",
         [
-            ("a: {duration : 10}", parser.StateAction("a", duration=10)),
-            (" abc  : {duration: 10}", parser.StateAction("abc", duration=10)),
-            ("b(): {end: 10}", parser.SequenceAction("b", end=10)),
+            ("a: {duration : 10}", StateAction("a", Duration("10"))),
+            (" abc  : {duration: 10}", StateAction("abc", Duration("10"))),
+            ("b(): {end: 10}", SequenceAction("b", Timeframe(end="10"))),
         ],
     )
     def test_with_args(self, string, expected):
@@ -60,34 +67,43 @@ class Test_FromJson:
         # -> parses to {'duration:100': None} instead of {duration: 100}
 
         with pytest.raises(parser.ParserError, match=".*action arguments.*"):
-            action = parser.Action.from_json(json)
+            parser.Action.from_json(json)
 
 
-class Test_Init:
+class Test_FromJson_Time:
     @pytest.mark.parametrize(
-        "start,end,duration,weight",
+        "action_json, expected_time",
         [
-            # Weight + any other
-            (1, None, None, 5),
-            (None, 2, None, 5),
-            (None, None, 3, 5),
-            (2, None, 3, 5),
-            # End + duration
-            (None, 4, 2, None),
-            (1, 2, 2, None),
+            # Duration
+            ("a", Duration(1)),
+            ("a: {duration: 1}", Duration("1")),
+            ("a: {duration: 2342}", Duration("2342")),
+            ("a: {duration: 'abc'}", Duration("abc")),
+            # Start
+            ("a: {start: 1}", Timeframe(start="1", duration="1")),
+            ("a: {start: 5, duration: 10}", Timeframe(start="5", duration="10")),
+            # End
+            ("a: {end: 1}", Timeframe(end="1")),
+            ("a: {start: 1, end: 20}", Timeframe(start="1", end="20")),
         ],
     )
-    def test_invalid_arg_combinations(self, start, end, duration, weight):
-        with pytest.raises(parser.ParserError, match="Actions.*can't define.*"):
-            parser.Action(start, end, None, weight, duration)
+    def test_allowed_combinations(self, action_json, expected_time):
+        json = yaml.safe_load(action_json)
+        action = parser.Action.from_json(json)
+
+        assert action.time == expected_time
 
     @pytest.mark.parametrize(
-        "start,end,duration,weight",
+        "action_json",
         [
-            (2, 5, None, None),  # Start and end
-            (2, None, 5, None),  # Start and duration
-            (None, None, None, 10),  # Only weight
+            "a: {end: 10, duration: 10}",
+            "a: {weight: 1, duration: 10}",
+            "a: {weight: 1, start: 1}",
+            "a: {weight: 1, end: 1}",
         ],
     )
-    def test_valid_arg_combinations(self, start, end, duration, weight):
-        parser.Action(start, end, None, weight, duration)
+    def test_forbidden_combinations(self, action_json):
+        json = yaml.safe_load(action_json)
+
+        with pytest.raises(ParserError):
+            Action.from_json(json)

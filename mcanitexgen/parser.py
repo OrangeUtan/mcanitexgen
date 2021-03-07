@@ -72,68 +72,88 @@ class Sequence:
 
     def weights(self):
         """ Returns the weights of the weighted actions in this sequence """
-        return map(lambda a: a.weight, filter(lambda a: a.has_weight, self.actions))
+        return map(lambda a: a.weight, filter(lambda a: a.is_weighted, self.actions))
 
 
-IntExpression = Union[str, int]
+class Weight(int):
+    pass
+
+
+class Duration(str):
+    pass
+
+
+@dataclass
+class Timeframe:
+    start: Optional[str] = None
+    end: Optional[str] = None
+    duration: Optional[str] = None
+
+    def __post_init__(self):
+        if self.start is None and self.end is None and self.duration is None:
+            raise ParserError(f"At least one of start/end/duration must not be None")
+        elif self.end and self.duration:
+            raise ParserError(f"Actions defining an end can't define a duration")
+        elif self.start and self.duration is None and self.end is None:
+            self.duration = "1"
 
 
 class Action(abc.ABC):
-    def __init__(
-        self,
-        start: Optional[IntExpression] = None,
-        end: Optional[IntExpression] = None,
-        mark: Optional[str] = None,
-        weight: int = 0,
-        duration: Optional[IntExpression] = None,
-    ):
-        if weight and (start or end or duration):
-            raise ParserError(f"Actions defining a weight can't define start/end/duration")
-
-        if end and duration:
-            raise ParserError(f"Actions defining an end can't define a duration")
-
-        self.start = start
-        self.end = end
+    def __init__(self, time: Union[Weight, Duration, Timeframe], mark: Optional[str] = None):
+        self.time = time
         self.mark = mark
-        self.weight = weight
-        self.duration = duration
 
     @classmethod
     def from_json(cls, json: Union[dict, str]):
-        if isinstance(json, str):
-            reference, args = json, {}
-        elif isinstance(json, dict):
-            reference, args = json.popitem()
-            if not args:
-                args = {}
-        else:
-            raise ParserError(f"'{json}' is not a valid action. Must either be str or dict")
+        ref, args = cls._get_ref_and_duration_from_json(json)
 
-        reference = reference.replace(" ", "")
-
-        start = args.pop("start") if "start" in args else None
-        end = args.pop("end") if "end" in args else None
         mark = args.pop("mark") if "mark" in args else None
-        weight = int(args.pop("weight")) if "weight" in args else 0
-        duration = args.pop("duration") if "duration" in args else None
+        weight = args.pop("weight") if "weight" in args else None
+        start = str(args.pop("start")) if "start" in args else None
+        end = str(args.pop("end")) if "end" in args else None
+        duration = str(args.pop("duration")) if "duration" in args else None
+
+        if weight:
+            if start or end or duration:
+                raise ParserError(f"Weighted actions can't define start/end/duration")
+            time = Weight(int(weight))
+        elif start or end:
+            time = Timeframe(start, end, duration)
+        else:
+            time = Duration(duration or "1")
 
         if len(args):
             raise ParserError(f"Unknown action arguments: '{args}'")
 
-        if cls.is_sequence_ref(reference):
-            reference, repeat = cls.parse_sequence_ref(reference)
-
-            return SequenceAction(reference, repeat, start, end, mark, weight, duration)
+        if cls._is_sequence_ref(ref):
+            sequence_ref, repeat = cls._parse_sequence_ref(ref)
+            return SequenceAction(sequence_ref, time, repeat, mark)
         else:
-            return StateAction(reference, start, end, mark, weight, duration)
+            return StateAction(ref, time, mark)
+
+    @property
+    def is_weighted(self):
+        return isinstance(self.time, Weight)
 
     @classmethod
-    def is_sequence_ref(cls, reference: str):
+    def _is_sequence_ref(cls, reference: str):
         return "()" in reference
 
     @classmethod
-    def parse_sequence_ref(cls, reference: str):
+    def _get_ref_and_duration_from_json(cls, json: Union[dict, str]):
+        if isinstance(json, str):
+            reference, duration = json, {}
+        elif isinstance(json, dict):
+            reference, duration = json.popitem()
+            if not duration:
+                duration = {}
+        else:
+            raise ParserError(f"'{json}' is not a valid action. Must either be str or dict")
+
+        return (reference.replace(" ", ""), duration)
+
+    @classmethod
+    def _parse_sequence_ref(cls, reference: str):
         reference = reference.replace(" ", "").removesuffix("()")
         if "*" in reference:
             repeat, reference = reference.split("*")
@@ -142,55 +162,40 @@ class Action(abc.ABC):
 
         return (reference, int(repeat))
 
-    @property
-    def has_weight(self):
-        return self.weight > 0
+
+@dataclass(init=False)
+class SequenceAction(Action):
+    sequence_ref: str
+    repeat: int
+    time: Union[Weight, Duration, Timeframe]
+    mark: Optional[str]
+
+    def __init__(
+        self,
+        seq_ref: str,
+        time: Union[Weight, Duration, Timeframe] = Duration(1),
+        repeat: int = 1,
+        mark: Optional[str] = None,
+    ):
+        super().__init__(time, mark)
+
+        self.sequence_ref = seq_ref
+        self.repeat = repeat
+
+        assert self.repeat >= 1
 
 
 @dataclass(init=False)
 class StateAction(Action):
-    state: str
-    start: Optional[IntExpression]
-    end: Optional[IntExpression]
+    state_ref: str
+    time: Union[Weight, Duration, Timeframe]
     mark: Optional[str]
-    weight: int
-    duration: Optional[IntExpression]
 
     def __init__(
         self,
-        state: str,
-        start: Optional[IntExpression] = None,
-        end: Optional[IntExpression] = None,
+        state_ref: str,
+        time: Union[Weight, Duration, Timeframe] = Duration(1),
         mark: Optional[str] = None,
-        weight: int = 0,
-        duration: Optional[IntExpression] = None,
     ):
-        super().__init__(start, end, mark, weight, duration)
-        self.state = state
-
-
-@dataclass(init=False)
-class SequenceAction(Action):
-    ref: str
-    repeat: int
-    start: Optional[IntExpression]
-    end: Optional[IntExpression]
-    mark: Optional[str]
-    weight: int
-    duration: Optional[IntExpression]
-
-    def __init__(
-        self,
-        ref: str,
-        repeat: int = 1,
-        start: Optional[IntExpression] = None,
-        end: Optional[IntExpression] = None,
-        mark: Optional[str] = None,
-        weight: int = 0,
-        duration: Optional[IntExpression] = None,
-    ):
-        super().__init__(start, end, mark, weight, duration)
-        self.ref = ref
-        self.repeat = repeat
-
-        assert self.repeat >= 1
+        super().__init__(time, mark)
+        self.state_ref = state_ref
