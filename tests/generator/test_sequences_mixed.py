@@ -2,7 +2,7 @@ import pytest
 import ruamel.yaml as yaml
 
 from mcanitexgen import generator
-from mcanitexgen.generator import AnimationContext, GeneratorError
+from mcanitexgen.generator import AnimationContext
 from mcanitexgen.parser import Sequence, SequenceAction, StateAction, TextureAnimation
 
 

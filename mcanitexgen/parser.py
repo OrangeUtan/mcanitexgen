@@ -66,25 +66,36 @@ class Sequence:
     def __post_init__(self):
         self.total_weight = sum(self.weights())
 
+        if self.name != "main":
+            for action in self.actions:
+                if isinstance(action.time, Timeframe):
+                    raise ParserError(
+                        f"Illegal action '{action}' in sequence '{self.name}'. Only 'main' sequence can contain actions with timeframes."
+                    )
+
     @property
     def is_weighted(self):
         return self.total_weight > 0
 
     def weights(self):
         """ Returns the weights of the weighted actions in this sequence """
-        return map(lambda a: a.weight, filter(lambda a: a.is_weighted, self.actions))
+        return map(lambda a: a.time, filter(lambda a: a.is_weighted, self.actions))
 
 
-class Weight(int):
+class Time(abc.ABC):
     pass
 
 
-class Duration(str):
+class Weight(int, Time):
+    pass
+
+
+class Duration(str, Time):
     pass
 
 
 @dataclass
-class Timeframe:
+class Timeframe(Time):
     start: Optional[str] = None
     end: Optional[str] = None
     duration: Optional[str] = None
@@ -99,7 +110,7 @@ class Timeframe:
 
 
 class Action(abc.ABC):
-    def __init__(self, time: Union[Weight, Duration, Timeframe], mark: Optional[str] = None):
+    def __init__(self, time: Time, mark: Optional[str] = None):
         self.time = time
         self.mark = mark
 
@@ -167,13 +178,13 @@ class Action(abc.ABC):
 class SequenceAction(Action):
     sequence_ref: str
     repeat: int
-    time: Union[Weight, Duration, Timeframe]
+    time: Time
     mark: Optional[str]
 
     def __init__(
         self,
         seq_ref: str,
-        time: Union[Weight, Duration, Timeframe] = Duration(1),
+        time: Time = Duration("1"),
         repeat: int = 1,
         mark: Optional[str] = None,
     ):
@@ -188,13 +199,13 @@ class SequenceAction(Action):
 @dataclass(init=False)
 class StateAction(Action):
     state_ref: str
-    time: Union[Weight, Duration, Timeframe]
+    time: Time
     mark: Optional[str]
 
     def __init__(
         self,
         state_ref: str,
-        time: Union[Weight, Duration, Timeframe] = Duration(1),
+        time: Time = Duration("1"),
         mark: Optional[str] = None,
     ):
         super().__init__(time, mark)

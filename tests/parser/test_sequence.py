@@ -1,7 +1,7 @@
 import pytest
 import ruamel.yaml as yaml
 
-from mcanitexgen.parser import Sequence, StateAction
+from mcanitexgen.parser import ParserError, Sequence, StateAction
 
 
 class Test_FromJson:
@@ -25,3 +25,10 @@ class Test_FromJson:
         assert len(seq.actions) == len(expected.actions)
         for action, expected_action in zip(seq.actions, expected.actions):
             assert action == expected_action
+
+    def test_action_with_timeframe_in_main(self):
+        Sequence.from_json("main", yaml.safe_load("[A, B: {start: 10, end: 20}]"))
+
+    def test_action_with_timeframe_not_in_main(self):
+        with pytest.raises(ParserError, match=".*Only 'main'.*timeframe.*"):
+            Sequence.from_json("a", yaml.safe_load("[A, B: {start: 10, end: 20}]"))
