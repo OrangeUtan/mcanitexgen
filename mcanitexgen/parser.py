@@ -110,7 +110,7 @@ class Timeframe(Time):
 
 
 class Action(abc.ABC):
-    def __init__(self, time: Time, mark: Optional[str] = None):
+    def __init__(self, time: Optional[Time], mark: Optional[str] = None):
         self.time = time
         self.mark = mark
 
@@ -130,8 +130,10 @@ class Action(abc.ABC):
             time = Weight(int(weight))
         elif start or end:
             time = Timeframe(start, end, duration)
+        elif duration:
+            time = Duration(duration)
         else:
-            time = Duration(duration or "1")
+            time = None
 
         if len(args):
             raise ParserError(f"Unknown action arguments: '{args}'")
@@ -140,7 +142,7 @@ class Action(abc.ABC):
             sequence_ref, repeat = cls._parse_sequence_ref(ref)
             return SequenceAction(sequence_ref, time, repeat, mark)
         else:
-            return StateAction(ref, time, mark)
+            return StateAction(ref, time or Duration("1"), mark)
 
     @property
     def is_weighted(self):
@@ -178,13 +180,13 @@ class Action(abc.ABC):
 class SequenceAction(Action):
     sequence_ref: str
     repeat: int
-    time: Time
+    time: Optional[Time]
     mark: Optional[str]
 
     def __init__(
         self,
         seq_ref: str,
-        time: Time = Duration("1"),
+        time: Optional[Time] = None,
         repeat: int = 1,
         mark: Optional[str] = None,
     ):
