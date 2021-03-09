@@ -6,6 +6,7 @@ from typing import Iterator, Optional, Union
 from mcanitexgen import utils
 from mcanitexgen.expressions import evaluate_int
 from mcanitexgen.parser import (
+    Action,
     Duration,
     ParserError,
     Sequence,
@@ -19,68 +20,6 @@ from mcanitexgen.parser import (
 
 class GeneratorError(Exception):
     pass
-
-
-# class AnimationContext:
-#     def __init__(
-#         self, anim: TextureAnimation, contexts: dict[str, "AnimationContext"] = dict()
-#     ):
-#         self.anim = anim
-#         self.end = 0
-#         self.state_to_index_map = {state: idx for idx, state in enumerate(self.anim.states)}
-#         self.marks: dict[str, Mark] = {}
-#         self.frames = []
-
-#         self._constant_sequence_durations: dict[str, int] = {}
-#         self._eval_locals = contexts
-
-#     def advance_time_by(self, amount: int):
-#         """ Advances the time of the animation by some amount """
-#         self.end += amount
-
-#     def advance_time_to(self, target_time: int):
-#         assert self.end <= target_time
-#         assert self.frames
-
-#         if self.frames:
-#             self.frames[-1]["time"] += self.elapsed_time(target_time)
-
-#         self.end = target_time
-
-#     def elapsed_time(self, current_time: int):
-#         """ Returns how much time elapsed from the last animation frame until the current time """
-#         return current_time - self.end
-
-#     def index_of_state(self, state: str):
-#         return self.state_to_index_map[state]
-
-#     def get_constant_duration(self, seq: Sequence):
-#         if seq.name in self._constant_sequence_durations:
-#             return self._constant_sequence_durations[seq.name]
-
-#         constant_duration = 0
-#         for action in seq.actions:
-#             if isinstance(action, StateAction) and action.duration:
-#                 constant_duration += action.duration
-#             elif isinstance(action, SequenceAction):
-#                 if action.duration:
-#                     constant_duration += action.repeat * action.duration
-
-#         return constant_duration
-
-#     def mark(self, name: str):
-#         return self.marks[name]
-
-#     def get_sequence_by_ref(self, ref: str):
-#         if not ref in self.anim.sequences:
-#             raise GeneratorError(f"Sequence '{ref}' doesn't exist")
-#         return self.anim.sequences[ref]
-
-#     def evaluate_int_expr(self, expr: str):
-#         try:
-#             return evaluate_int(expr, self._eval_locals)
-#         except Exception as e:
-#             raise GeneratorError(f"Error while parsing expression: '{expr}'") from e
 
 
 @dataclass
@@ -132,81 +71,51 @@ def create_animation(texture_anim: TextureAnimation, expr_locals=dict()):
 
 
 def unweighted_sequence_to_animation(
-    sequence: Sequence, sequence_start: int, texture_anim: TextureAnimation, expr_locals={}
+    sequence: Sequence, start: int, texture_anim: TextureAnimation, expr_locals={}
 ):
     assert not sequence.is_weighted
-    animation = Animation(sequence_start, sequence_start)
+    animation = Animation(start, start)
 
     for action in sequence.actions:
-        action_start, action_end = animation.end, animation.end
-
-        if isinstance(action.time, Duration):
-            action_duration = evaluate_duration(action.time, expr_locals)
-            action_end += action_duration
-        elif isinstance(action.time, Timeframe):
-            start, end, duration = evaluate_timeframe(action.time, expr_locals)
-            if start and end and duration:
-                action_start = start
-                action_end = start + duration
-                action_duration = duration
-            elif not start and end and not duration:
-                action_end = end
-                action_duration = action_end - action_start
-            else:
-                raise GeneratorError(
-                    f"Unexpected combination of start, end, duration: '{start}', '{end}', '{duration}'"
-                )
-        else:
-            action_duration = None
-
-        # Create animation
-        if isinstance(action, SequenceAction):
-            action_animation = sequence_action_to_animation(
-                action, action_start, action_duration, texture_anim, expr_locals
-            )
-            animation.append(action_animation)
-        elif isinstance(action, StateAction):
-            assert action_start is not None and action_end is not None
-            index = texture_anim.states.index(action.state_ref)
-            animation.add_frame(index, action_start, action_end)
-
-        # Add mark
-        if action.mark:
-            animation.marks[action.mark] == Mark(action_start, animation.end)
+        action_start, action_duration = get_unweighted_action_timeframe(
+            action, animation.end, expr_locals
+        )
+        append_action_to_animation(
+            action, action_start, action_duration, animation, texture_anim, expr_locals
+        )
 
     return animation
 
 
 def weighted_sequence_to_animation(
     sequence: Sequence,
-    sequence_start: int,
+    start: int,
     duration: int,
     texture_anim: TextureAnimation,
     expr_locals={},
 ):
     assert sequence.is_weighted
-    animation = Animation(sequence_start, sequence_start)
+    animation = Animation(start, start)
 
-    duration_distributor = utils.DurationDistributor(duration, sequence.total_weight)
+    distributable_duration = duration - get_constant_duration(
+        sequence, texture_anim, expr_locals
+    )
+    duration_distributor = utils.DurationDistributor(
+        distributable_duration, sequence.total_weight
+    )
 
     for action in sequence.actions:
-        assert isinstance(action.time, Weight)
-
-        action_start = animation.end
-        action_duration = duration_distributor.take(int(action.time))
-
-        if isinstance(action, SequenceAction):
-            sub_anim = sequence_action_to_animation(
-                action, action_start, action_duration, texture_anim, expr_locals
-            )
-            animation.append(sub_anim)
+        if action.is_weighted:
+            action_start = animation.end
+            action_duration = duration_distributor.take(int(action.time))
         else:
-            index = texture_anim.states.index(action.state_ref)
-            animation.add_frame(index, action_start, action_start + action_duration)
+            action_start, action_duration = get_unweighted_action_timeframe(
+                action, animation.end, expr_locals
+            )
 
-        # Add mark
-        if action.mark:
-            animation.marks[action.mark] == Mark(action_start, animation.end)
+        append_action_to_animation(
+            action, action_start, action_duration, animation, texture_anim, expr_locals
+        )
 
     if not duration_distributor.is_empty():
         raise GeneratorError(f"Couldn't distribute duration over weights")
@@ -214,23 +123,46 @@ def weighted_sequence_to_animation(
     return animation
 
 
-# def get_action_durations(seq: Sequence, duration: int) -> Iterator[Optional[int]]:
-#     if seq.is_weighted:
-#         if not duration:
-#             raise GeneratorError(f"Didn't pass duration to weighted sequence '{seq.name}'")
+def get_unweighted_action_timeframe(action: Action, action_start: int, expr_locals={}):
+    if isinstance(action.time, Duration):
+        action_duration = evaluate_duration(action.time, expr_locals)
+    elif isinstance(action.time, Timeframe):
+        start, end, duration = evaluate_timeframe(action.time, expr_locals)
+        if start and end and duration:
+            action_start = start
+            action_duration = duration
+        elif not start and end and not duration:
+            action_duration = end - action_start
+        else:
+            raise GeneratorError(
+                f"Unexpected combination of start, end, duration: '{start}', '{end}', '{duration}'"
+            )
+    else:
+        action_duration = None
 
-#         weighted_action_durations = utils.partition_by_weights(
-#             duration, seq.total_weight, seq.weights()
-#         )
-#         return map(
-#             lambda a: next(weighted_action_durations) if a.has_weight else a.duration,
-#             seq.actions,
-#         )
-#     else:
-#         if duration:
-#             raise GeneratorError(f"Passed duration to constant sequence '{seq.name}'")
+    return (action_start, action_duration)
 
-#         return map(lambda a: a.duration, seq.actions)
+
+def append_action_to_animation(
+    action: Action,
+    start: int,
+    duration: Optional[int],
+    anim: Animation,
+    texture_anim,
+    expr_locals,
+):
+    if isinstance(action, SequenceAction):
+        anim.append(
+            sequence_action_to_animation(action, start, duration, texture_anim, expr_locals)
+        )
+    else:
+        assert duration is not None
+        index = texture_anim.states.index(action.state_ref)
+        anim.add_frame(index, start, start + duration)
+
+    # Add mark
+    if action.mark:
+        anim.marks[action.mark] == Mark(start, anim.end)
 
 
 def sequence_action_to_animation(
@@ -249,11 +181,7 @@ def sequence_action_to_animation(
                 f"Didn't pass duration to weighted sequence '{sequence.name}'"
             )
 
-        distributable_duration = duration - action.repeat * get_constant_duration(
-            sequence, texture_anim, expr_locals
-        )
-        duration_distributor = utils.DurationDistributor(distributable_duration, action.repeat)
-
+        duration_distributor = utils.DurationDistributor(duration, action.repeat)
         for _ in range(action.repeat):
             anim.append(
                 weighted_sequence_to_animation(
@@ -273,23 +201,6 @@ def sequence_action_to_animation(
             )
 
     return anim
-
-
-# def sequence_action_to_frames(action: SequenceAction, duration: int, ctx: AnimationContext):
-#     seq = ctx.get_sequence_by_ref(action.ref)
-
-#     if action.weight:
-#         if duration:
-#             duration -= action.repeat * ctx.get_constant_duration(seq)
-
-#         for d in utils.partition_by_weights(duration, action.repeat, [1] * action.repeat):
-#             sequence_to_frames(seq, ctx, d)
-#     else:
-#         if duration:
-#             duration -= ctx.get_constant_duration(seq)
-
-#         for i in range(action.repeat):
-#             sequence_to_frames(seq, ctx, duration)
 
 
 def get_constant_duration(sequence: Sequence, texture_anim: TextureAnimation, expr_locals={}):

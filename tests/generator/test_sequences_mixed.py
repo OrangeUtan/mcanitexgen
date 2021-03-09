@@ -2,66 +2,83 @@ import pytest
 import ruamel.yaml as yaml
 
 from mcanitexgen import generator
-from mcanitexgen.generator import AnimationContext
-from mcanitexgen.parser import Sequence, SequenceAction, StateAction, TextureAnimation
+from mcanitexgen.generator import Animation
+from mcanitexgen.parser import (
+    Duration,
+    Sequence,
+    SequenceAction,
+    StateAction,
+    TextureAnimation,
+    Weight,
+)
 
 
 def frame(index: int, time: int):
     return {"index": index, "time": time}
 
 
-def state(r, s=None, e=None, m=None, w=0, d=None):
-    return StateAction(state=r, start=s, end=e, mark=m, weight=w, duration=d)
+@pytest.fixture
+def texture_anim():
+    return TextureAnimation("anim", None, ["A", "B", "C"], {"main": Sequence("main", [])})
 
 
-def sequence(seq, rep=1, s=None, e=None, m=None, w=0, d=None):
-    return SequenceAction(ref=seq, repeat=rep, start=s, end=e, mark=m, weight=w, duration=d)
-
-
-class Test_SequenceToFrames:
-    @pytest.fixture
-    def context(self):
-        return AnimationContext(
-            TextureAnimation("anim", None, ["A", "B", "C"], {"main": Sequence("main", [])})
-        )
-
+class Test_WeightedSequenceToFrames:
     @pytest.mark.parametrize(
-        "actions, duration, expected_frames",
+        "actions, duration, expected_anim",
         [
-            ("[A: {weight: 1}, B: {duration: 10}]", 100, [frame(0, 100), frame(1, 10)]),
+            (
+                "[A: {weight: 1}, B: {duration: 10}]",
+                100,
+                Animation(0, 100, [frame(0, 90), frame(1, 10)]),
+            ),
+            (
+                "[A: {weight: 1}, B: {duration: 90}]",
+                100,
+                Animation(0, 100, [frame(0, 10), frame(1, 90)]),
+            ),
             (
                 "[A: {weight: 1}, C: {duration: 10}, B: {weight: 1}]",
                 100,
-                [frame(0, 50), frame(2, 10), frame(1, 50)],
+                Animation(0, 100, [frame(0, 45), frame(2, 10), frame(1, 45)]),
             ),
         ],
     )
-    def test(self, actions, duration, expected_frames, context: AnimationContext):
-        seq = Sequence.from_json("a", yaml.safe_load(actions), context.anim.sequences)
+    def test(self, actions, duration, expected_anim, texture_anim: TextureAnimation):
+        sequence = Sequence.from_json("a", yaml.safe_load(actions))
 
-        generator.sequence_to_frames(seq, context, duration)
-        assert context.frames == expected_frames
+        animation = generator.weighted_sequence_to_animation(
+            sequence, 0, duration, texture_anim
+        )
+        assert animation == expected_anim
 
 
-class Test_SequenceToFrames:
-    @pytest.fixture
-    def context(self):
+class Test_Nested_WeightedSequenceToFrames:
+    @pytest.fixture()
+    def texture_anim(self):
         sequences = {
             "main": Sequence("main", []),
-            "mixed": Sequence("z", [state("A", w=1), state("B", d=10), state("C", w=1)]),
+            "m": Sequence(
+                "z",
+                [
+                    StateAction("A", Weight(1)),
+                    StateAction("B", Duration("10")),
+                    StateAction("C", Weight(1)),
+                ],
+            ),
         }
-        return AnimationContext(TextureAnimation("a", None, ["A", "B", "C"], sequences))
+        return TextureAnimation("a", None, ["A", "B", "C"], sequences)
 
     @pytest.mark.parametrize(
-        "actions, expected_frames, expected_duration",
+        "actions, expected_anim",
         [
-            ("[mixed(): {duration: 100}]", [frame(0, 45), frame(1, 10), frame(2, 45)], 100),
+            (
+                "[m(): {duration: 100}]",
+                Animation(0, 100, [frame(0, 45), frame(1, 10), frame(2, 45)]),
+            ),
         ],
     )
-    def test(self, actions, expected_frames, expected_duration, context: AnimationContext):
-        seq = Sequence.from_json("a", yaml.safe_load(actions))
+    def test(self, actions, expected_anim, texture_anim: TextureAnimation):
+        sequence = Sequence.from_json("a", yaml.safe_load(actions))
 
-        generator.sequence_to_frames(seq, context)
-
-        assert context.frames == expected_frames
-        assert context.end == expected_duration
+        animation = generator.unweighted_sequence_to_animation(sequence, 0, texture_anim)
+        assert animation == expected_anim
