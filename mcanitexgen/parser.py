@@ -18,7 +18,11 @@ def parse_animation_file(path: Path):
 
 
 def parse_animations(json: dict):
-    animations = [TextureAnimation.from_json(texture, j) for texture, j in json.items()]
+    animations = {}
+    for texture, anim_json in json.items():
+        ta = TextureAnimation.from_json(texture, anim_json)
+        animations[ta.name] = ta
+
     return animations
 
 

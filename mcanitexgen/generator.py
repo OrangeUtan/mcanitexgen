@@ -100,9 +100,14 @@ def weighted_sequence_to_animation(
     assert sequence.is_weighted
     animation = Animation(start, start)
 
-    distributable_duration = duration - get_constant_duration(
-        sequence, texture_anim, expr_locals
-    )
+    constant_dur = get_constant_duration(sequence, texture_anim, expr_locals)
+    distributable_duration = duration - constant_dur
+
+    if distributable_duration <= 0:
+        raise GeneratorError(
+            f"Duration '{duration}' is not enough for the weighted sequence '{sequence.name}' with constant duration '{constant_dur}'"
+        )
+
     duration_distributor = utils.DurationDistributor(
         distributable_duration, sequence.total_weight
     )

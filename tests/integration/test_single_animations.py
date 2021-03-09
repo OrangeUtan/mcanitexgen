@@ -1,9 +1,7 @@
-import pytest
 import ruamel.yaml as yaml
 
 from mcanitexgen import generator, parser
-from mcanitexgen.generator import Animation, GeneratorError, Mark
-from mcanitexgen.parser import Sequence, SequenceAction, StateAction, TextureAnimation
+from mcanitexgen.generator import Animation
 
 
 def frame(index: int, time: int):
@@ -45,7 +43,7 @@ def test_simple_blinking():
         ],
     )
 
-    animation = generator.create_animation(parser.parse_animations(json)[0])
+    animation = generator.create_animation(parser.parse_animations(json)["head"])
     assert animation == expected_anim
     assert sum(map(lambda f: f["time"], animation.frames)) == expected_anim.end
 
@@ -85,7 +83,7 @@ def test_weighted_blinking():
         ],
     )
 
-    animation = generator.create_animation(parser.parse_animations(json)[0])
+    animation = generator.create_animation(parser.parse_animations(json)["head"])
     assert animation == expected_anim
     assert sum(map(lambda f: f["time"], animation.frames)) == expected_anim.end
 
@@ -131,7 +129,7 @@ def test_weighted_blinking_2():
         ],
     )
 
-    animation = generator.create_animation(parser.parse_animations(json)[0])
+    animation = generator.create_animation(parser.parse_animations(json)["head"])
     assert animation == expected_anim
     assert sum(map(lambda f: f["time"], animation.frames)) == expected_anim.end
 
@@ -166,5 +164,5 @@ def test_unweighted_seq_in_weighted_seq():
         ],
     )
 
-    animation = generator.create_animation(parser.parse_animations(json)[0])
+    animation = generator.create_animation(parser.parse_animations(json)["head"])
     assert animation == expected_anim
