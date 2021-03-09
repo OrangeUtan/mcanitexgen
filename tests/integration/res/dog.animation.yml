@@ -93,7 +93,7 @@ tail_and_hindlegs.png:
 
   main():
       - 4 * bored()
-      - TAIL_LOW: { duration: 790 }
+      - TAIL_LOW: { duration: 650 }
       - 3 * wagging_with_pause()
       - TAIL_LOW: { end: head.end }
 
