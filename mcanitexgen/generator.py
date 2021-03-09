@@ -13,6 +13,7 @@ from mcanitexgen.parser import (
     StateAction,
     TextureAnimation,
     Timeframe,
+    Weight,
 )
 
 
@@ -176,17 +177,41 @@ def unweighted_sequence_to_animation(
     return animation
 
 
-# def weighted_sequence_to_animation(seq: Sequence, ctx: AnimationContext, duration: int):
-#     assert seq.is_weighted
-#     frames = []
+def weighted_sequence_to_animation(
+    sequence: Sequence,
+    sequence_start: int,
+    duration: int,
+    texture_anim: TextureAnimation,
+    expr_locals={},
+):
+    assert sequence.is_weighted
+    animation = Animation(sequence_start, sequence_start)
 
-#     for action in seq.actions:
-#         if isinstance(action.time, Weight):
-#             pass
-#         elif isinstance(action.time, Duration):
-#             pass
-#         elif isinstance(action.time, Timeframe):
-#             pass
+    duration_distributor = utils.DurationDistributor(duration, sequence.total_weight)
+
+    for action in sequence.actions:
+        assert isinstance(action.time, Weight)
+
+        action_start = animation.end
+        action_duration = duration_distributor.take(int(action.time))
+
+        if isinstance(action, SequenceAction):
+            sub_anim = sequence_action_to_animation(
+                action, action_start, action_duration, texture_anim, expr_locals
+            )
+            animation.append(sub_anim)
+        else:
+            index = texture_anim.states.index(action.state_ref)
+            animation.add_frame(index, action_start, action_start + action_duration)
+
+        # Add mark
+        if action.mark:
+            animation.marks[action.mark] == Mark(action_start, animation.end)
+
+    if not duration_distributor.is_empty():
+        raise GeneratorError(f"Couldn't distribute duration over weights")
+
+    return animation
 
 
 # def get_action_durations(seq: Sequence, duration: int) -> Iterator[Optional[int]]:
@@ -219,14 +244,32 @@ def sequence_action_to_animation(
     anim = Animation(start, start)
 
     if sequence.is_weighted:
-        pass
+        if not duration:
+            raise GeneratorError(
+                f"Didn't pass duration to weighted sequence '{sequence.name}'"
+            )
+
+        distributable_duration = duration - action.repeat * get_constant_duration(
+            sequence, texture_anim, expr_locals
+        )
+        duration_distributor = utils.DurationDistributor(distributable_duration, action.repeat)
+
+        for _ in range(action.repeat):
+            anim.append(
+                weighted_sequence_to_animation(
+                    sequence, anim.end, duration_distributor.take(1), texture_anim, expr_locals
+                )
+            )
+
+        if not duration_distributor.is_empty():
+            raise GeneratorError(f"Couldn't distribute duration over weights")
     else:
         if duration:
             raise GeneratorError(f"Passing duration to unweighted sequence '{sequence.name}'")
 
         for _ in range(action.repeat):
             anim.append(
-                unweighted_sequence_to_animation(sequence, start, texture_anim, expr_locals)
+                unweighted_sequence_to_animation(sequence, anim.end, texture_anim, expr_locals)
             )
 
     return anim
@@ -249,8 +292,16 @@ def sequence_action_to_animation(
 #             sequence_to_frames(seq, ctx, duration)
 
 
-def get_constant_duration(seq: Sequence, texture_anim: TextureAnimation):
-    pass
+def get_constant_duration(sequence: Sequence, texture_anim: TextureAnimation, expr_locals={}):
+    constant_duration = 0
+    for action in sequence.actions:
+        if isinstance(action.time, Duration):
+            constant_duration += evaluate_duration(action.time, expr_locals)
+        elif isinstance(action.time, Weight) and isinstance(action, SequenceAction):
+            seq = texture_anim.sequences[action.sequence_ref]
+            constant_duration += get_constant_duration(seq, texture_anim, expr_locals)
+
+    return constant_duration
 
 
 def evaluate_timeframe(

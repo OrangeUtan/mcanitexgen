@@ -2,99 +2,119 @@ import pytest
 import ruamel.yaml as yaml
 
 from mcanitexgen import generator
-from mcanitexgen.generator import AnimationContext, GeneratorError
-from mcanitexgen.parser import Sequence, SequenceAction, StateAction, TextureAnimation
+from mcanitexgen.generator import Animation, GeneratorError
+from mcanitexgen.parser import (
+    Duration,
+    Sequence,
+    SequenceAction,
+    StateAction,
+    TextureAnimation,
+    Weight,
+)
 
 
 def frame(index: int, time: int):
     return {"index": index, "time": time}
 
 
-def state(r, s=None, e=None, m=None, w=0, d=None):
-    return StateAction(state=r, start=s, end=e, mark=m, weight=w, duration=d)
+@pytest.fixture
+def texture_anim():
+    return TextureAnimation("a", None, ["A", "B", "C"], {"main": Sequence("main", [])})
 
 
-def sequence(ref, rep=1, s=None, e=None, m=None, w=0, d=None):
-    return SequenceAction(ref=ref, repeat=rep, start=s, end=e, mark=m, weight=w, duration=d)
-
-
-class Test_SequenceToFrames:
-    @pytest.fixture
-    def context(self):
-        return AnimationContext(
-            TextureAnimation("a", None, ["A", "B", "C"], {"main": Sequence("main", [])})
-        )
-
+class Test_WeightedSequenceToAnimation:
     @pytest.mark.parametrize(
-        "actions, duration, expected_frames",
+        "actions, duration, expected_anim",
         [
-            ([state("A", w=1), state("B", w=1)], 100, [frame(0, 50), frame(1, 50)]),
-            ([state("A", w=1), state("B", w=2)], 100, [frame(0, 33), frame(1, 67)]),
-        ],
-    )
-    def test_actions_with_duration(
-        self, actions, duration, expected_frames, context: AnimationContext
-    ):
-        seq = Sequence("a", actions)
-
-        generator.sequence_to_frames(seq, context, duration)
-
-        assert context.frames == expected_frames
-        assert context.end == duration
-
-    def test_dont_pass_duration_to_weighted_sequence(self, context: AnimationContext):
-        seq = Sequence("a", [state("A", w=1)])
-
-        with pytest.raises(GeneratorError, match=".*duration.*"):
-            generator.sequence_to_frames(seq, context, None)
-
-
-class Test_Nested_SequenceToFrames:
-    @pytest.fixture
-    def context(self):
-        sequences = {
-            "main": Sequence("main", []),
-            "y": Sequence("z", [state("A", w=1), state("B", w=1), state("C", w=1)]),
-            "z": Sequence("z", [state("A", w=1), state("B", w=1)]),
-        }
-        return AnimationContext(TextureAnimation("a", None, ["A", "B", "C"], sequences))
-
-    @pytest.mark.parametrize(
-        "actions, expected_frames, expected_time",
-        [
-            ("[z(): {duration: 100}]", [frame(0, 50), frame(1, 50)], 100),
-            ("[y(): {duration: 99}]", [frame(0, 33), frame(1, 33), frame(2, 33)], 99),
             (
-                "[z(): {duration: 100}, A: {duration: 2}]",
-                [frame(0, 50), frame(1, 50), frame(0, 2)],
-                102,
+                [StateAction("A", Weight(1)), StateAction("B", Weight(1))],
+                100,
+                Animation(0, 100, [frame(0, 50), frame(1, 50)]),
+            ),
+            (
+                [StateAction("A", Weight(1)), StateAction("B", Weight(2))],
+                100,
+                Animation(0, 100, [frame(0, 33), frame(1, 67)]),
+            ),
+            (
+                [
+                    StateAction("A", Weight(3)),
+                    StateAction("B", Weight(1)),
+                    StateAction("C", Weight(2)),
+                ],
+                73,
+                Animation(0, 73, [frame(0, 37), frame(1, 12), frame(2, 24)]),
             ),
         ],
     )
-    def test_pass_duration(
-        self, actions, expected_frames, expected_time, context: AnimationContext
+    def test_actions_with_duration(
+        self, actions, duration, expected_anim, texture_anim: TextureAnimation
     ):
-        seq = Sequence.from_json("a", yaml.safe_load(actions))
+        sequence = Sequence("a", actions)
 
-        generator.sequence_to_frames(seq, context)
+        animation = generator.weighted_sequence_to_animation(
+            sequence, 0, duration, texture_anim
+        )
+        assert animation == expected_anim
+        assert sum(map(lambda f: f["time"], animation.frames)) == duration
 
-        assert context.frames == expected_frames
-        assert context.end == expected_time
 
-    def test_deeply_nested(self, context: AnimationContext):
-        context.anim.sequences = context.anim.sequences | {
-            "deep1": Sequence("deep1", [sequence("deep2", w=1)]),
-            "deep2": Sequence("deep2", [sequence("deep3", w=1)]),
-            "deep3": Sequence("deep3", [sequence("deep4", w=1)]),
-            "deep4": Sequence("deep4", [sequence("deep5", w=1)]),
-            "deep5": Sequence("deep5", [sequence("deep6", w=1)]),
-            "deep6": Sequence("deep6", [state("A", w=2)]),
+class Test_Nested_WeightedSequenceToAnimation:
+    @pytest.fixture
+    def texture_anim(self):
+        sequences = {
+            "main": Sequence("main", []),
+            "y": Sequence(
+                "z",
+                [
+                    StateAction("A", Weight(1)),
+                    StateAction("B", Weight(1)),
+                    StateAction("C", Weight(1)),
+                ],
+            ),
+            "z": Sequence("z", [StateAction("A", Weight(1)), StateAction("B", Weight(1))]),
+        }
+        return TextureAnimation("a", None, ["A", "B", "C"], sequences)
+
+    @pytest.mark.parametrize(
+        "actions, expected_anim",
+        [
+            ("[z(): {duration: 100}]", Animation(0, 100, [frame(0, 50), frame(1, 50)])),
+            (
+                "[y(): {duration: 99}]",
+                Animation(0, 99, [frame(0, 33), frame(1, 33), frame(2, 33)]),
+            ),
+            (
+                "[z(): {duration: 100}, A: {duration: 2}]",
+                Animation(0, 102, [frame(0, 50), frame(1, 50), frame(0, 2)]),
+            ),
+        ],
+    )
+    def test_pass_duration(self, actions, expected_anim, texture_anim: TextureAnimation):
+        sequence = Sequence.from_json("a", yaml.safe_load(actions))
+        animation = generator.unweighted_sequence_to_animation(sequence, 0, texture_anim)
+        assert animation == expected_anim
+
+    def test_deeply_nested(self, texture_anim: TextureAnimation):
+        texture_anim.sequences |= {
+            "deep1": Sequence("deep1", [SequenceAction("deep2", Weight(1))]),
+            "deep2": Sequence("deep2", [SequenceAction("deep3", Weight(1))]),
+            "deep3": Sequence("deep3", [SequenceAction("deep4", Weight(1))]),
+            "deep4": Sequence("deep4", [SequenceAction("deep5", Weight(1))]),
+            "deep5": Sequence("deep5", [SequenceAction("deep6", Weight(1))]),
+            "deep6": Sequence("deep6", [StateAction("A", Weight(2))]),
         }
 
-        seq = Sequence("a", [sequence("deep1", d=100)])
-        expected_frames = [frame(0, 100)]
+        sequence = Sequence("a", [SequenceAction("deep1", Duration(100))])
+        animation = generator.unweighted_sequence_to_animation(sequence, 0, texture_anim)
+        assert animation == Animation(0, 100, [frame(0, 100)])
 
-        generator.sequence_to_frames(seq, context)
 
-        assert context.frames == expected_frames
-        assert context.end == 100
+class Test_sequence_action_to_animation:
+    def test_dont_pass_duration_to_weighted_sequence(self, texture_anim: TextureAnimation):
+        texture_anim.sequences["a"] = Sequence("a", [StateAction("A", Weight(1))])
+
+        with pytest.raises(GeneratorError, match=".*'a'.*"):
+            generator.sequence_action_to_animation(
+                SequenceAction("a", None), 0, None, texture_anim, {}
+            )
