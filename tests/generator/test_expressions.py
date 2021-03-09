@@ -1,5 +1,3 @@
-from os import stat
-
 import pytest
 import ruamel.yaml as yaml
 

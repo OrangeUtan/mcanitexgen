@@ -165,7 +165,7 @@ def append_action_to_animation(
 
     # Add mark
     if action.mark:
-        anim.marks[action.mark] == Mark(start, anim.end)
+        anim.marks[action.mark] = Mark(start, anim.end)
 
 
 def sequence_action_to_animation(

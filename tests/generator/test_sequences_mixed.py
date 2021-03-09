@@ -3,14 +3,7 @@ import ruamel.yaml as yaml
 
 from mcanitexgen import generator
 from mcanitexgen.generator import Animation
-from mcanitexgen.parser import (
-    Duration,
-    Sequence,
-    SequenceAction,
-    StateAction,
-    TextureAnimation,
-    Weight,
-)
+from mcanitexgen.parser import Duration, Sequence, StateAction, TextureAnimation, Weight
 
 
 def frame(index: int, time: int):
