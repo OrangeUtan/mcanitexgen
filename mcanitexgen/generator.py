@@ -69,7 +69,7 @@ class Animation:
 
 def create_animation(texture_anim: TextureAnimation, expr_locals=dict()):
     return unweighted_sequence_to_animation(
-        texture_anim.sequences["main"], texture_anim, expr_locals
+        texture_anim.sequences["main"], 0, texture_anim, expr_locals
     )
 
 
@@ -184,16 +184,28 @@ def sequence_action_to_animation(
                 f"Didn't pass duration to weighted sequence '{sequence.name}'"
             )
 
-        duration_distributor = utils.DurationDistributor(duration, action.repeat)
-        for _ in range(action.repeat):
-            anim.append(
-                weighted_sequence_to_animation(
-                    sequence, anim.end, duration_distributor.take(1), texture_anim, expr_locals
+        if action.is_weighted:
+            duration_distributor = utils.DurationDistributor(duration, action.repeat)
+            for _ in range(action.repeat):
+                anim.append(
+                    weighted_sequence_to_animation(
+                        sequence,
+                        anim.end,
+                        duration_distributor.take(1),
+                        texture_anim,
+                        expr_locals,
+                    )
                 )
-            )
 
-        if not duration_distributor.is_empty():
-            raise GeneratorError(f"Couldn't distribute duration over weights")
+            if not duration_distributor.is_empty():
+                raise GeneratorError(f"Couldn't distribute duration over weights")
+        else:
+            for _ in range(action.repeat):
+                anim.append(
+                    weighted_sequence_to_animation(
+                        sequence, anim.end, duration, texture_anim, expr_locals
+                    )
+                )
     else:
         if duration:
             raise GeneratorError(f"Passing duration to unweighted sequence '{sequence.name}'")
@@ -211,7 +223,7 @@ def get_constant_duration(sequence: Sequence, texture_anim: TextureAnimation, ex
     for action in sequence.actions:
         if isinstance(action.time, Duration):
             constant_duration += evaluate_duration(action.time, expr_locals)
-        elif isinstance(action.time, Weight) and isinstance(action, SequenceAction):
+        elif not action.is_weighted and isinstance(action, SequenceAction):
             seq = texture_anim.sequences[action.sequence_ref]
             constant_duration += get_constant_duration(seq, texture_anim, expr_locals)
 

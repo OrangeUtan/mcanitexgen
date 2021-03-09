@@ -2,17 +2,12 @@ import pytest
 import ruamel.yaml as yaml
 
 from mcanitexgen import generator, parser
-from mcanitexgen.generator import AnimationContext, GeneratorError, Mark
+from mcanitexgen.generator import Animation, GeneratorError, Mark
 from mcanitexgen.parser import Sequence, SequenceAction, StateAction, TextureAnimation
-from tests.generator.test_sequences_constant import frame
 
 
-def state(r, s=None, e=None, m=None, w=0, d=None):
-    return StateAction(state=r, start=s, end=e, mark=m, weight=w, duration=d)
-
-
-def sequence(ref, rep=1, s=None, e=None, m=None, w=0, d=None):
-    return SequenceAction(ref=ref, repeat=rep, start=s, end=e, mark=m, weight=w, duration=d)
+def frame(index: int, time: int):
+    return {"index": index, "time": time}
 
 
 def test_simple_blinking():
@@ -37,17 +32,22 @@ def test_simple_blinking():
     """
     )
 
-    expected_frames = [
-        frame(0, 120),
-        frame(1, 4),
-        frame(0, 120),
-        frame(1, 4),
-        frame(0, 120),
-        frame(1, 4),
-    ]
+    expected_anim = Animation(
+        0,
+        372,
+        [
+            frame(0, 120),
+            frame(1, 4),
+            frame(0, 120),
+            frame(1, 4),
+            frame(0, 120),
+            frame(1, 4),
+        ],
+    )
 
-    frames = generator.animation_to_frames(parser.parse_animations(json)[0])
-    assert frames == expected_frames
+    animation = generator.create_animation(parser.parse_animations(json)[0])
+    assert animation == expected_anim
+    assert sum(map(lambda f: f["time"], animation.frames)) == expected_anim.end
 
 
 def test_weighted_blinking():
@@ -72,20 +72,25 @@ def test_weighted_blinking():
     """
     )
 
-    expected_frames = [
-        frame(0, 100),
-        frame(1, 20),
-        frame(0, 100),
-        frame(1, 20),
-        frame(0, 100),
-        frame(1, 20),
-    ]
+    expected_anim = Animation(
+        0,
+        360,
+        [
+            frame(0, 100),
+            frame(1, 20),
+            frame(0, 100),
+            frame(1, 20),
+            frame(0, 100),
+            frame(1, 20),
+        ],
+    )
 
-    frames = generator.animation_to_frames(parser.parse_animations(json)[0])
-    assert frames == expected_frames
+    animation = generator.create_animation(parser.parse_animations(json)[0])
+    assert animation == expected_anim
+    assert sum(map(lambda f: f["time"], animation.frames)) == expected_anim.end
 
 
-def test_weighted_blinking():
+def test_weighted_blinking_2():
     json = yaml.safe_load(
         """
     head.png:
@@ -108,19 +113,58 @@ def test_weighted_blinking():
     """
     )
 
-    expected_frames = [
-        frame(0, 11),
-        frame(1, 4),
-        frame(0, 10),
-        frame(1, 4),
-        frame(1, 10),
-        #
-        frame(0, 11),
-        frame(1, 4),
-        frame(0, 10),
-        frame(1, 4),
-        frame(1, 10),
-    ]
+    expected_anim = Animation(
+        0,
+        78,
+        [
+            frame(0, 11),
+            frame(1, 4),
+            frame(0, 10),
+            frame(1, 4),
+            frame(1, 10),
+            #
+            frame(0, 11),
+            frame(1, 4),
+            frame(0, 10),
+            frame(1, 4),
+            frame(1, 10),
+        ],
+    )
 
-    frames = generator.animation_to_frames(parser.parse_animations(json)[0])
-    assert frames == expected_frames
+    animation = generator.create_animation(parser.parse_animations(json)[0])
+    assert animation == expected_anim
+    assert sum(map(lambda f: f["time"], animation.frames)) == expected_anim.end
+
+
+def test_unweighted_seq_in_weighted_seq():
+    json = yaml.safe_load(
+        """
+    head.png:
+        states: [
+            A,
+            B,
+        ]
+
+        nested_unweighted():
+            - A: {duration: 4}
+
+        weighted():
+            - B: {weight: 1}
+            - nested_unweighted()
+
+        main():
+            - weighted(): {duration: 120}
+    """
+    )
+
+    expected_anim = Animation(
+        0,
+        120,
+        [
+            frame(1, 116),
+            frame(0, 4),
+        ],
+    )
+
+    animation = generator.create_animation(parser.parse_animations(json)[0])
+    assert animation == expected_anim
