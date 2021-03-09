@@ -1,13 +1,8 @@
 import math
 
-from mcanitexgen.parser import IntExpression
 
-
-def evaluate_int(expr: IntExpression, expr_locals: dict = dict()) -> int:
-    if type(expr) is int:
-        return expr
-    else:
-        return int(eval(expr, expression_globals, expr_locals))
+def evaluate_int(expr: str, expr_locals: dict = dict()) -> int:
+    return int(eval(expr, expression_globals, expr_locals))
 
 
 expression_globals = {

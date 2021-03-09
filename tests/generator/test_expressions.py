@@ -4,106 +4,91 @@ import pytest
 import ruamel.yaml as yaml
 
 from mcanitexgen import generator
-from mcanitexgen.generator import AnimationContext, Mark
-from mcanitexgen.parser import Sequence, SequenceAction, StateAction, TextureAnimation
-from tests.generator.test_sequences_constant import frame
+from mcanitexgen.generator import Animation, Mark
+from mcanitexgen.parser import Sequence, TextureAnimation, Timeframe
 
 
-def state(r, s=None, e=None, m=None, w=0, d=None):
-    return StateAction(state=r, start=s, end=e, mark=m, weight=w, duration=d)
-
-
-def sequence(ref, rep=1, s=None, e=None, m=None, w=0, d=None):
-    return SequenceAction(ref=ref, repeat=rep, start=s, end=e, mark=m, weight=w, duration=d)
+def frame(index: int, time: int):
+    return {"index": index, "time": time}
 
 
 @pytest.fixture
-def basic_context():
-    return AnimationContext(
-        TextureAnimation("a", None, ["A", "B", "C"], {"main": Sequence("main", [])})
-    )
+def texture_anim():
+    return TextureAnimation("a", None, ["A", "B", "C"], {"main": Sequence("main", [])})
 
 
 @pytest.fixture
-def marked_context():
-    ctx = AnimationContext(
-        TextureAnimation("m", None, ["A", "B", "C"], {"main": Sequence("main", [])})
-    )
-    ctx.marks = {
-        "a": Mark("a", 0, 1),
-        "b": Mark("b", 1, 10),
-        "c": Mark("c", 10, 100),
+def marked_anim():
+    marks = {
+        "a": Mark(0, 1),
+        "b": Mark(1, 10),
+        "c": Mark(10, 100),
     }
-    ctx.frames = [frame(0, 1)]
-    ctx.advance_time_to(100)
-    return ctx
+
+    return Animation(0, 100, [frame(0, 100)], marks)
 
 
-def parsed_context():
-    ctx = AnimationContext(
-        TextureAnimation("a", None, ["A", "B", "C"], {"main": Sequence("main", [])})
+class Test_EvaluateTimeframe:
+    @pytest.mark.parametrize(
+        "timeframe, expected",
+        [
+            (Timeframe(start="ceil(12.1123574687456)"), (13, 14, 1)),
+            (Timeframe(start="sqrt(16)", duration="mod(230,100)"), (4, 34, 30)),
+            (Timeframe(end="pow(3,3)"), (None, 27, None)),
+            (Timeframe(start="sqrt(16)", end="12"), (4, 12, 8)),
+        ],
     )
+    def test_only_arithmetic(self, timeframe: Timeframe, expected):
+        assert generator.evaluate_timeframe(timeframe, {}) == expected
 
-    generator.sequence_to_frames()
+    @pytest.mark.parametrize(
+        "timeframe, expected",
+        [
+            (Timeframe(start="m.mark('a').start + 10"), (10, 11, 1)),
+            (Timeframe(start="m.mark('a').end + 10"), (11, 12, 1)),
+            (Timeframe(start="m.mark('b').end + 10", duration="20"), (20, 40, 20)),
+        ],
+    )
+    def test_reference_marks(self, timeframe: Timeframe, expected, marked_anim: Animation):
+        expr_locals = {"m": marked_anim}
+        assert generator.evaluate_timeframe(timeframe, expr_locals) == expected
 
-
-@pytest.mark.parametrize(
-    "actions, expected_frames",
-    [
-        # int literal
-        ("[A, B: {start: 10, duration: 10}]", [frame(0, 10), frame(1, 10)]),
-        ("[A: {end: 3342}]", [frame(0, 3342)]),
-        ("[A: {duration: 3342}]", [frame(0, 3342)]),
-        # Simple arithmetic
-        ("[A, B: {start: 3*3, duration: 10}]", [frame(0, 9), frame(1, 10)]),
-        ("[A: {end: 3*3}]", [frame(0, 9)]),
-        ("[A: {duration: 3*3}]", [frame(0, 9)]),
-    ],
-)
-def test_start_end_duration_are_parsed(
-    actions, expected_frames, basic_context: AnimationContext
-):
-    seq = Sequence.from_json("a", yaml.safe_load(actions))
-
-    generator.sequence_to_frames(seq, basic_context)
-    assert basic_context.frames == expected_frames
-
-
-@pytest.mark.parametrize(
-    "actions, expected_frames",
-    [
-        ("[A: {end: 'pow(3,3)'}]", [frame(0, 27)]),
-        ("[A: {duration: 'mod(230,100)'}]", [frame(0, 30)]),
-        (
-            "[A, B: {start: 'ceil(12.1123574687456)', duration: 10}]",
-            [frame(0, 13), frame(1, 10)],
-        ),
-    ],
-)
-def test_arithmetic_functions(actions, expected_frames, basic_context: AnimationContext):
-    seq = Sequence.from_json("a", yaml.safe_load(actions))
-
-    generator.sequence_to_frames(seq, basic_context)
-    assert basic_context.frames == expected_frames
+    @pytest.mark.parametrize(
+        "timeframe, expected",
+        [
+            (Timeframe(start="m.end"), (100, 101, 1)),
+            (Timeframe(start="m.end / 2"), (50, 51, 1)),
+        ],
+    )
+    def test_reference_animation(elf, timeframe: Timeframe, expected, marked_anim: Animation):
+        expr_locals = {"m": marked_anim}
+        assert generator.evaluate_timeframe(timeframe, expr_locals) == expected
 
 
-def test_reference_animation_end(
-    basic_context: AnimationContext, marked_context: AnimationContext
-):
-    basic_context._eval_locals = {marked_context.anim.name: marked_context}
+class Test_GeneratedAnimation:
+    @pytest.mark.parametrize(
+        "actions_json, expected_anim",
+        [
+            # int literal
+            (
+                "[A, B: {start: 10, duration: 10}]",
+                Animation(0, 20, [frame(0, 10), frame(1, 10)]),
+            ),
+            ("[A: {end: 3342}]", Animation(0, 3342, [frame(0, 3342)])),
+            ("[A: {duration: 3342}]", Animation(0, 3342, [frame(0, 3342)])),
+            # Simple arithmetic
+            (
+                "[A, B: {start: 3*3, duration: 10}]",
+                Animation(0, 19, [frame(0, 9), frame(1, 10)]),
+            ),
+            ("[A: {end: 3*3}]", Animation(0, 9, [frame(0, 9)])),
+            ("[A: {duration: 3*3}]", Animation(0, 9, [frame(0, 9)])),
+        ],
+    )
+    def test_start_end_duration_are_parsed(
+        self, actions_json, expected_anim, texture_anim: TextureAnimation
+    ):
+        sequence = Sequence.from_json("main", yaml.safe_load(actions_json))
 
-    seq = Sequence("a", [state("A"), state("B", s="m.end / 2")])
-    generator.sequence_to_frames(seq, basic_context)
-
-    assert basic_context.frames == [frame(0, 50), frame(1, 1)]
-
-
-def test_reference_animation_mark(
-    basic_context: AnimationContext, marked_context: AnimationContext
-):
-    basic_context._eval_locals = {marked_context.anim.name: marked_context}
-
-    seq = Sequence("a", [state("A"), state("B", s="m.mark('c').start + 5")])
-    generator.sequence_to_frames(seq, basic_context)
-
-    assert basic_context.frames == [frame(0, 15), frame(1, 1)]
+        animation = generator.unweighted_sequence_to_animation(sequence, 0, texture_anim)
+        assert animation == expected_anim

@@ -63,6 +63,9 @@ class Animation:
         self.end = end
         self.frames.append({"index": index, "time": end - start})
 
+    def mark(self, name: str):
+        return self.marks[name]
+
 
 def create_animation(texture_anim: TextureAnimation, expr_locals=dict()):
     return unweighted_sequence_to_animation(
