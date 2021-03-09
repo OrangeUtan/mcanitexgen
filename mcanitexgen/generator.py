@@ -1,20 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterator, Optional, Union
+from typing import Optional, Union
 
 from mcanitexgen import utils
 from mcanitexgen.expressions import evaluate_int
 from mcanitexgen.parser import (
     Action,
     Duration,
-    ParserError,
     Sequence,
     SequenceAction,
-    StateAction,
     TextureAnimation,
     Timeframe,
-    Weight,
 )
 
 
