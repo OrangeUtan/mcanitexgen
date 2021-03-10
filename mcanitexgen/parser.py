@@ -36,25 +36,15 @@ class State:
 @dataclass(init=False)
 class Sequence:
     actions: list[Action]
-    name: Optional[str]
+    name: Optional[str] = None
 
     def __init__(self, *actions: Union[Action, Sequence]):
-        self.actions = []
-        for entry in actions:
-            if isinstance(entry, Action):
-                self.actions.append(entry)
-            elif isinstance(entry, Sequence):
-                self.actions.append(entry())
+        self.actions = list(map(lambda a: a() if isinstance(a, Sequence) else a, actions))
 
         self.total_weight = sum(map(lambda a: int(a.time), self.weighted_actions()))
         self.is_weighted = self.total_weight > 0
 
-        self.constant_duration = 0
-        for action in self.actions:
-            if isinstance(action.time, Duration):
-                self.constant_duration += action.time
-            elif not action.is_weighted and isinstance(action, SequenceAction):
-                self.constant_duration += action.sequence.constant_duration
+        self.constant_duration = sum(map(lambda a: a.constant_duration(), self.actions))
 
     def weighted_actions(self):
         return filter(lambda a: a.is_weighted, self.actions)
@@ -157,6 +147,14 @@ class Action(abc.ABC):
     @property
     def is_weighted(self):
         return isinstance(self.time, Weight)
+
+    def constant_duration(self):
+        if isinstance(self.time, Duration):
+            return self.time
+        elif isinstance(self, SequenceAction) and not self.is_weighted:
+            return self.sequence.constant_duration
+        else:
+            return 0
 
 
 @dataclass(init=False)
