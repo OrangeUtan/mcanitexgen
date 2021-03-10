@@ -68,10 +68,7 @@ class Sequence:
             raise NotImplementedError()
 
     def __rmul__(self, other):
-        if isinstance(other, int):
-            return self(repeat=other)
-        else:
-            raise NotImplementedError()
+        return self.__mul__(other)
 
 
 class Time:
@@ -163,7 +160,10 @@ class StateAction(Action):
     time: Time
     mark: Optional[str] = None
 
-    def __init__(self, state: State, time: Optional[Time], mark: Optional[str]):
+    def __init__(self, state: State, time: Time, mark: Optional[str] = None):
+        if time is None:
+            raise ParserError(f"Time of StateAction cannot be None")
+
         super().__init__(time, mark)
         self.state = state
 
@@ -186,16 +186,18 @@ class SequenceAction(Action):
         self.sequence = sequence
         self.repeat = repeat
 
+        if self.repeat <= 0:
+            raise ParserError(f"Sequence cannot be repeated '{self.repeat}' times")
+
     def __mul__(self, other):
         if isinstance(other, int):
+            if other <= 0:
+                raise ParserError(f"Sequence cannot be repeated '{other}' times")
+
             self.repeat = other
         else:
             raise NotImplementedError()
         return self
 
     def __rmul__(self, other):
-        if isinstance(other, int):
-            self.repeat = other
-        else:
-            raise NotImplementedError()
-        return self
+        return self.__mul__(other)
