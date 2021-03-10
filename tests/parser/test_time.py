@@ -40,6 +40,7 @@ class Test_Time_from_args:
     @pytest.mark.parametrize(
         "start, end, duration, weight, expected_time",
         [
+            (None, None, None, None, None),
             # Weight
             (None, None, None, 12, Weight(12)),
             # Duration
@@ -58,13 +59,6 @@ class Test_Time_from_args:
     @pytest.mark.parametrize(
         "start, end, duration, weight, match",
         [
-            (
-                None,
-                None,
-                None,
-                None,
-                "Time must have at least one of start, end, duration or weight set",
-            ),
             # Weight
             (None, None, None, 0, "Weight of time must be at least 1"),
             (None, None, 1, 1, "Weighted time can't have start, end or duration"),

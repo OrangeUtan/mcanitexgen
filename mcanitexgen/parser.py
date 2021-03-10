@@ -11,8 +11,12 @@ class ParserError(Exception):
 
 @dataclass(init=False)
 class State:
-    index: int = None
-    name: str = None
+    index: int
+    name: str
+
+    def __init__(self, index=None, name=None):
+        self.index = index
+        self.name = name
 
     def __call__(
         self,
@@ -22,7 +26,10 @@ class State:
         weight: Optional[int] = None,
         mark: Optional[str] = None,
     ):
-        time = Time.from_args(start, end, duration, weight, allow_none=False)
+        time = Time.from_args(start, end, duration, weight)
+        if time is None:
+            time = Duration(1)
+
         return StateAction(self, time, mark)
 
 
@@ -61,7 +68,7 @@ class Sequence:
         weight: Optional[int] = None,
         mark: Optional[str] = None,
     ):
-        time = Time.from_args(start, end, duration, weight, allow_none=True)
+        time = Time.from_args(start, end, duration, weight)
         return SequenceAction(self, time, repeat, mark)
 
     def __mul__(self, other):
@@ -83,7 +90,6 @@ class Time:
         end: Optional[int] = None,
         duration: Optional[int] = None,
         weight: Optional[int] = None,
-        allow_none=False,
     ):
         if weight != None:
             if weight <= 0:
@@ -98,12 +104,7 @@ class Time:
                 raise ParserError(f"Duration must be at least 1")
             return Duration(duration)
         else:
-            if allow_none:
-                return None
-            else:
-                raise ParserError(
-                    f"Time must have at least one of start, end, duration or weight set"
-                )
+            return None
 
 
 class Duration(int, Time):
