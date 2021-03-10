@@ -113,12 +113,31 @@ class Timeframe(Time):
     duration: Optional[int] = None
 
     def __post_init__(self):
+        # Check for illegal inputs
         if self.start is None and self.end is None and self.duration is None:
-            raise ParserError(f"At least one of start/end/duration must not be None")
-        elif self.end and self.duration:
-            raise ParserError(f"Actions defining an end can't define a duration")
-        elif self.start and self.duration is None and self.end is None:
-            self.duration = "1"
+            raise ParserError(f"Timeframe must have at least one of start, end, duration set")
+        elif self.start is None and self.end != None and self.duration != None:
+            raise ParserError(f"Timeframes without start can't have end and duration")
+
+        if self.start != None:
+            # Make sure start, end and duration are set
+            if self.end is None or self.duration is None:
+                self._deduce_unset_attributes()
+
+            if self.end - self.start != self.duration:
+                raise ParserError(
+                    f"Start, end and duration of timeframe don't match: {self.start}, {self.end}, {self.duration}"
+                )
+
+    def _deduce_unset_attributes(self):
+        if self.start != None:
+            if self.end != None:
+                self.duration = self.end - self.start
+            elif self.duration != None:
+                self.end = self.start + self.duration
+            else:
+                self.end = self.start + 1
+                self.duration = 1
 
 
 class Action(abc.ABC):
