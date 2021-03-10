@@ -6,27 +6,30 @@ from typing import Optional, Type
 
 from mcanitexgen import utils
 
-from .parser import Action, Duration, Sequence, SequenceAction, Timeframe
+from .parser import Action, Duration, Sequence, SequenceAction, State, Timeframe
 
 
 class GeneratorError(Exception):
     pass
 
 
-def animation(texture: Path, root_sequence: str = "root"):
+def animation(texture: Path, main_sequence: str = "main"):
     def wrapper(cls: Type[TextureAnimation]):
         cls.sequences = {}
-        for name, sequence in filter(
-            lambda i: isinstance(i[1], Sequence), cls.__dict__.items()
-        ):
-            cls.sequences[name] = sequence
-            sequence.name = name
+        cls.states = []
+        for name, val in cls.__dict__.items():
+            if isinstance(val, State):
+                val.name = name
+                val.index = len(cls.states)
+                cls.states.append(val)
+            elif isinstance(val, Sequence):
+                val.name = name
+                cls.sequences[name] = val
 
         cls.texture = texture
-        cls.root = cls.sequences[root_sequence]
+        cls.root = cls.sequences[main_sequence]
 
         animation = unweighted_sequence_to_animation(cls.root, 0)
-        cls.start = animation.start
         cls.end = animation.end
         cls.frames = animation.frames
         cls.marks = animation.marks
@@ -38,10 +41,10 @@ def animation(texture: Path, root_sequence: str = "root"):
 
 class TextureAnimation:
     texture: Path
-    sequences: list[Sequence]
+    sequences: dict[str, Sequence]
+    states: list[State]
     root: Sequence
 
-    start: int
     end: int
     frames: list[dict]
     marks: dict[str, Mark]
@@ -159,7 +162,7 @@ def append_action_to_animation(
         anim.append(sequence_action_to_animation(action, start, duration))
     else:
         assert duration is not None
-        anim.add_frame(action.index, start, start + duration)
+        anim.add_frame(action.state.index, start, start + duration)
 
     # Add mark
     if action.mark:

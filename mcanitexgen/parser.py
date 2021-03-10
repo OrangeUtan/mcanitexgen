@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Union
 
 
 class ParserError(Exception):
@@ -10,17 +10,34 @@ class ParserError(Exception):
 
 
 @dataclass(init=False)
+class State:
+    index: int = None
+    name: str = None
+
+    def __call__(
+        self,
+        start: Optional[int] = None,
+        end: Optional[int] = None,
+        duration: Optional[int] = None,
+        weight: Optional[int] = None,
+        mark: Optional[str] = None,
+    ):
+        time = Time.from_args(start, end, duration, weight)
+        return StateAction(self, time, mark)
+
+
+@dataclass(init=False)
 class Sequence:
     actions: list[Action]
     name: Optional[str]
 
-    def __init__(self, *actions: Action):
+    def __init__(self, *actions: Union[Action, Sequence]):
         self.actions = []
         for entry in actions:
             if isinstance(entry, Action):
                 self.actions.append(entry)
-            else:
-                self.actions += entry
+            elif isinstance(entry, Sequence):
+                self.actions.append(entry())
 
         self.total_weight = sum(map(lambda a: int(a.time), self.weighted_actions()))
         self.is_weighted = self.total_weight > 0
@@ -35,9 +52,50 @@ class Sequence:
     def weighted_actions(self):
         return filter(lambda a: a.is_weighted, self.actions)
 
+    def __call__(
+        self,
+        repeat=1,
+        start: Optional[int] = None,
+        end: Optional[int] = None,
+        duration: Optional[int] = None,
+        weight: Optional[int] = None,
+        mark: Optional[str] = None,
+    ):
+        time = Time.from_args(start, end, duration, weight)
+        return SequenceAction(self, time, repeat, mark)
+
+    def __mul__(self, other):
+        if isinstance(other, int):
+            return self(repeat=other)
+        else:
+            raise NotImplementedError()
+
+    def __rmul__(self, other):
+        if isinstance(other, int):
+            return self(repeat=other)
+        else:
+            raise NotImplementedError()
+
 
 class Time:
-    pass
+    def from_args(
+        start: Optional[int] = None,
+        end: Optional[int] = None,
+        duration: Optional[int] = None,
+        weight: Optional[int] = None,
+    ):
+        if weight:
+            return Weight(weight)
+        elif start or end:
+            return Timeframe(start, end, duration)
+        elif duration:
+            return Duration(duration)
+        elif not start and not end and not duration and not weight:
+            return None
+        else:
+            raise ParserError(
+                f"Illegal combination of start, end, duration and weight: {start}, {end}, {duration}, {weight}"
+            )
 
 
 class Duration(int, Time):
@@ -75,13 +133,13 @@ class Action(abc.ABC):
 
 @dataclass(init=False)
 class StateAction(Action):
-    index: int
+    state: State
     time: Time
     mark: Optional[str] = None
 
-    def __init__(self, index: int, time: Optional[Time], mark: Optional[str]):
+    def __init__(self, state: State, time: Optional[Time], mark: Optional[str]):
         super().__init__(time, mark)
-        self.index = index
+        self.state = state
 
 
 @dataclass(init=False)
@@ -115,13 +173,3 @@ class SequenceAction(Action):
         else:
             raise NotImplementedError()
         return self
-
-
-def state(index: int, time: Time, mark: Optional[str] = None):
-    return StateAction(index, time, mark)
-
-
-def sequence(
-    sequence: Sequence, time: Optional[Time] = None, repeat=1, mark: Optional[str] = None
-):
-    return SequenceAction(sequence, time, repeat, mark)
