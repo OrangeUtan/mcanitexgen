@@ -22,7 +22,7 @@ class State:
         weight: Optional[int] = None,
         mark: Optional[str] = None,
     ):
-        time = Time.from_args(start, end, duration, weight)
+        time = Time.from_args(start, end, duration, weight, allow_none=False)
         return StateAction(self, time, mark)
 
 
@@ -61,7 +61,7 @@ class Sequence:
         weight: Optional[int] = None,
         mark: Optional[str] = None,
     ):
-        time = Time.from_args(start, end, duration, weight)
+        time = Time.from_args(start, end, duration, weight, allow_none=True)
         return SequenceAction(self, time, repeat, mark)
 
     def __mul__(self, other):
@@ -83,19 +83,27 @@ class Time:
         end: Optional[int] = None,
         duration: Optional[int] = None,
         weight: Optional[int] = None,
+        allow_none=False,
     ):
-        if weight:
+        if weight != None:
+            if weight <= 0:
+                raise ParserError(f"Weight of time must be at least 1")
+            if start or end or duration:
+                raise ParserError(f"Weighted time can't have start, end or duration")
             return Weight(weight)
-        elif start or end:
+        elif start != None or end != None:
             return Timeframe(start, end, duration)
-        elif duration:
+        elif duration != None:
+            if duration <= 0:
+                raise ParserError(f"Duration must be at least 1")
             return Duration(duration)
-        elif not start and not end and not duration and not weight:
-            return None
         else:
-            raise ParserError(
-                f"Illegal combination of start, end, duration and weight: {start}, {end}, {duration}, {weight}"
-            )
+            if allow_none:
+                return None
+            else:
+                raise ParserError(
+                    f"Time must have at least one of start, end, duration or weight set"
+                )
 
 
 class Duration(int, Time):

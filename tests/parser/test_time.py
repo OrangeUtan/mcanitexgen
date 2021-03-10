@@ -1,6 +1,6 @@
 import pytest
 
-from mcanitexgen.parser import ParserError, State, Time, Timeframe
+from mcanitexgen.parser import Duration, ParserError, Time, Timeframe, Weight
 
 
 class Test_Timeframe_init:
@@ -34,3 +34,47 @@ class Test_Timeframe_init:
     def test_illegal_args(self, start, end, duration, match):
         with pytest.raises(ParserError, match=match):
             Timeframe(start, end, duration)
+
+
+class Test_Time_from_args:
+    @pytest.mark.parametrize(
+        "start, end, duration, weight, expected_time",
+        [
+            # Weight
+            (None, None, None, 12, Weight(12)),
+            # Duration
+            (None, None, 10, None, Duration(10)),
+            # Timeframe
+            (0, None, None, None, Timeframe(0, 1, 1)),
+            (1, 20, None, None, Timeframe(1, 20, 19)),
+            (1, 20, 19, None, Timeframe(1, 20, 19)),
+            (1, None, 19, None, Timeframe(1, 20, 19)),
+            (None, 10, None, None, Timeframe(None, 10, None)),
+        ],
+    )
+    def test_args(self, start, end, duration, weight, expected_time):
+        assert Time.from_args(start, end, duration, weight) == expected_time
+
+    @pytest.mark.parametrize(
+        "start, end, duration, weight, match",
+        [
+            (
+                None,
+                None,
+                None,
+                None,
+                "Time must have at least one of start, end, duration or weight set",
+            ),
+            # Weight
+            (None, None, None, 0, "Weight of time must be at least 1"),
+            (None, None, 1, 1, "Weighted time can't have start, end or duration"),
+            (None, 1, None, 1, "Weighted time can't have start, end or duration"),
+            (1, None, None, 1, "Weighted time can't have start, end or duration"),
+            # Duration
+            (None, None, 0, None, "Duration must be at least 1"),
+            (None, None, -10, None, "Duration must be at least 1"),
+        ],
+    )
+    def test_illegal_args(self, start, end, duration, weight, match):
+        with pytest.raises(ParserError, match=match):
+            Time.from_args(start, end, duration, weight)
