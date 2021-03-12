@@ -16,12 +16,10 @@ class GeneratorError(Exception):
 def animation(texture: Path, main_sequence: str = "main"):
     def wrapper(cls: Type[TextureAnimation]):
         cls.sequences = {}
-        cls.states = []
+        cls.states = {}
         for name, val in cls.__dict__.items():
             if isinstance(val, State):
-                val.name = name
-                val.index = len(cls.states)
-                cls.states.append(val)
+                cls.states[val.index] = val
             elif isinstance(val, Sequence):
                 val.name = name
                 cls.sequences[name] = val
@@ -42,7 +40,7 @@ def animation(texture: Path, main_sequence: str = "main"):
 class TextureAnimation:
     texture: Path
     sequences: dict[str, Sequence]
-    states: list[State]
+    states: dict[int, State]
     root: Sequence
 
     end: int

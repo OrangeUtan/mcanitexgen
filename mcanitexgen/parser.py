@@ -12,11 +12,9 @@ class ParserError(Exception):
 @dataclass(init=False)
 class State:
     index: int
-    name: str
 
-    def __init__(self, index=None, name=None):
+    def __init__(self, index):
         self.index = index
-        self.name = name
 
     def __call__(
         self,
