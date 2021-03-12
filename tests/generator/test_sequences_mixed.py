@@ -27,7 +27,7 @@ class Test_weighted_sequence_to_animation:
                 [
                     StateAction(State(0), Weight(1)),
                     StateAction(State(2), Duration(10)),
-                    StateAction(State(2), Weight(1)),
+                    StateAction(State(1), Weight(1)),
                 ],
                 100,
                 Animation(0, 100, [frame(0, 45), frame(2, 10), frame(1, 45)]),
@@ -44,9 +44,9 @@ class Test_weighted_sequence_to_animation:
 class Test_Nested_WeightedSequenceToFrames:
     def mixed_sequence():
         return Sequence(
-            StateAction("A", Weight(1)),
-            StateAction("B", Duration("10")),
-            StateAction("C", Weight(1)),
+            StateAction(State(0), Weight(1)),
+            StateAction(State(1), Duration(10)),
+            StateAction(State(2), Weight(1)),
         )
 
     @pytest.mark.parametrize(
