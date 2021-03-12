@@ -159,9 +159,6 @@ class StateAction(Action):
     mark: Optional[str] = None
 
     def __init__(self, state: State, time: Time, mark: Optional[str] = None):
-        if time is None:
-            raise ParserError(f"Time of StateAction cannot be None")
-
         super().__init__(time, mark)
         self.state = state
 

@@ -1,109 +1,49 @@
 import pytest
-import ruamel.yaml as yaml
 
-from mcanitexgen import parser
-from mcanitexgen.parser import (
-    Action,
-    Duration,
-    ParserError,
-    SequenceAction,
-    StateAction,
-    Timeframe,
-)
+from mcanitexgen.parser import Duration, ParserError, Sequence, SequenceAction
 
 
-class Test_ParseSequenceRef:
+class Test_SequenceAction_init:
     @pytest.mark.parametrize(
-        "ref, expected_repeat, expected_ref",
+        "args",
         [
-            ("a()", 1, "a"),
-            ("1*abc()", 1, "abc"),
-            ("7   *   b()", 7, "b"),
-            ("7 2  *   b()", 72, "b"),
+            (Sequence(), Duration(1), 0),
+            (Sequence(), Duration(1), -1),
         ],
     )
-    def test_parse_repeat(self, ref, expected_repeat, expected_ref):
-        reference, repeat = parser.Action._parse_sequence_ref(ref)
-        assert reference == expected_ref
-        assert repeat == expected_repeat
+    def test_illegal_args(self, args):
+        with pytest.raises(
+            ParserError, match=f"Sequence cannot be repeated '{args[2]}' times"
+        ):
+            SequenceAction(*args)
 
 
-class Test_FromJson:
-    @pytest.mark.parametrize(
-        "string,expected",
-        [
-            ("A_STATE", StateAction("A_STATE")),
-            ("A_STATE:", StateAction("A_STATE")),
-            ("pop()", SequenceAction("pop")),
-            ("pop():", SequenceAction("pop")),
-            ("3 * pop()", SequenceAction("pop", repeat=3)),
-            ("3 * pop():", SequenceAction("pop", repeat=3)),
-            ("b()", SequenceAction("b", repeat=1)),
-            ("  b  (  )  ", SequenceAction("b", repeat=1)),
-        ],
-    )
-    def test_no_args(self, string, expected):
-        json = yaml.safe_load(string)
-        action = parser.Action.from_json(json)
-        assert type(action) == type(expected)
-        assert action == expected
+class Test_SequenceAction_mul_and_rmul:
+    @pytest.mark.parametrize("repeat", [1, 5, 7])
+    def test(self, repeat):
+        action_l = SequenceAction(Sequence(), Duration(1))
+        action_r = SequenceAction(Sequence(), Duration(1))
 
-    @pytest.mark.parametrize(
-        "string,expected",
-        [
-            ("a: {duration : 10}", StateAction("a", Duration("10"))),
-            (" abc  : {duration: 10}", StateAction("abc", Duration("10"))),
-            ("b(): {end: 10}", SequenceAction("b", Timeframe(end="10"))),
-        ],
-    )
-    def test_with_args(self, string, expected):
-        json = yaml.safe_load(string)
-        action = parser.Action.from_json(json)
-        assert type(action) == type(expected)
-        assert action == expected
+        assert repeat * action_l == action_r * repeat
+        assert isinstance(action_l, SequenceAction)
+        assert action_l.repeat == repeat
 
-    def test_forget_space_after_colon_in_args(self):
-        json = yaml.safe_load("a: {duration:100}")
-        # -> parses to {'duration:100': None} instead of {duration: 100}
+    @pytest.mark.parametrize("repeat", [0, -1, -23423])
+    def test_invalid_repeat(self, repeat):
+        action = SequenceAction(Sequence(), Duration(1))
 
-        with pytest.raises(parser.ParserError, match=".*action arguments.*"):
-            parser.Action.from_json(json)
+        with pytest.raises(ParserError, match=f"Sequence cannot be repeated '{repeat}' times"):
+            repeat * action
 
+        with pytest.raises(ParserError, match=f"Sequence cannot be repeated '{repeat}' times"):
+            action * repeat
 
-class Test_FromJson_Time:
-    @pytest.mark.parametrize(
-        "action_json, expected_time",
-        [
-            # Duration
-            ("a", Duration(1)),
-            ("a: {duration: 1}", Duration("1")),
-            ("a: {duration: 2342}", Duration("2342")),
-            ("a: {duration: 'abc'}", Duration("abc")),
-            # Start
-            ("a: {start: 1}", Timeframe(start="1", duration="1")),
-            ("a: {start: 5, duration: 10}", Timeframe(start="5", duration="10")),
-            # End
-            ("a: {end: 1}", Timeframe(end="1")),
-            ("a: {start: 1, end: 20}", Timeframe(start="1", end="20")),
-        ],
-    )
-    def test_allowed_combinations(self, action_json, expected_time):
-        json = yaml.safe_load(action_json)
-        action = parser.Action.from_json(json)
+    @pytest.mark.parametrize("repeat", [None, "a string", "1", Sequence()])
+    def test_repeat_with_invalid_type(self, repeat):
+        action = SequenceAction(Sequence(), Duration(1))
 
-        assert action.time == expected_time
+        with pytest.raises(NotImplementedError):
+            repeat * action
 
-    @pytest.mark.parametrize(
-        "action_json",
-        [
-            "a: {end: 10, duration: 10}",
-            "a: {weight: 1, duration: 10}",
-            "a: {weight: 1, start: 1}",
-            "a: {weight: 1, end: 1}",
-        ],
-    )
-    def test_forbidden_combinations(self, action_json):
-        json = yaml.safe_load(action_json)
-
-        with pytest.raises(ParserError):
-            Action.from_json(json)
+        with pytest.raises(NotImplementedError):
+            action * repeat
