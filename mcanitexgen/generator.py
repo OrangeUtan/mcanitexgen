@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import importlib
+import importlib.util
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import ModuleType
 from typing import Optional, Type
 
 from mcanitexgen import utils
@@ -11,6 +14,22 @@ from .parser import Action, Duration, Sequence, SequenceAction, State, Timeframe
 
 class GeneratorError(Exception):
     pass
+
+
+def load_animations_from_file(path: Path):
+    spec = importlib.util.spec_from_file_location(path.name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    return get_texture_animations_from_module(module)
+
+
+def get_texture_animations_from_module(module: ModuleType):
+    return {
+        k: v
+        for k, v in module.__dict__.items()
+        if isinstance(v, Type) and issubclass(v, TextureAnimation) and v != TextureAnimation
+    }
 
 
 def animation(texture: Path, main_sequence: str = "main"):
@@ -28,10 +47,10 @@ def animation(texture: Path, main_sequence: str = "main"):
         cls.root = cls.sequences[main_sequence]
 
         animation = unweighted_sequence_to_animation(cls.root, 0)
+        cls.start = animation.start
         cls.end = animation.end
         cls.frames = animation.frames
         cls.marks = animation.marks
-
         return cls
 
     return wrapper
@@ -43,6 +62,7 @@ class TextureAnimation:
     states: dict[int, State]
     root: Sequence
 
+    start: int
     end: int
     frames: list[dict]
     marks: dict[str, Mark]
