@@ -37,7 +37,12 @@ class Sequence:
     name: Optional[str] = None
 
     def __init__(self, *actions: Union[Action, Sequence]):
-        self.actions = list(map(lambda a: a() if isinstance(a, Sequence) else a, actions))
+        self.actions = list(
+            map(
+                lambda a: a() if (isinstance(a, Sequence) or isinstance(a, State)) else a,
+                actions,
+            )
+        )
 
         self.total_weight = sum(map(lambda a: int(a.time), self.weighted_actions()))
         self.is_weighted = self.total_weight > 0
