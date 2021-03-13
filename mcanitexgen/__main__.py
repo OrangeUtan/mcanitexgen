@@ -10,7 +10,7 @@ from mcanitexgen import load_animations_from_file
 app = typer.Typer()
 
 
-@app.command()
+@app.command(help="Generate .mcmeta files for all animations in an animation file")
 def generate(
     animations_file: str,
     out_dir: Optional[str] = typer.Argument(
@@ -45,7 +45,7 @@ def get_animation_states(img):
     ]
 
 
-@app.command()
+@app.command(help="Create gifs for all animations in an animation file")
 def gif(
     animations_file: str,
     out_dir: Optional[str] = typer.Argument(

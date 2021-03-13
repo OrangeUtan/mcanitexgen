@@ -4,25 +4,19 @@ Mcanitexgen is a generator for ".mcmeta" files that Minecraft uses to animate te
 ## The full power of Python
 Mcanitexgen allows you to write texture animations in Python instead of json. Using a programming language allows you to create much more complex animations, like this dog that has 3 textures that are synchronised with each other.
 
-<div style="text-align:center">
-  <img src="examples/dog/dog.gif" width="400" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
-</div>
-
-Features:
-- Synchronise multiple animations with each other
--
+<img src="examples/dog/dog.gif" width="400" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
 
 ## Install
 `pip install mcanitexgen`
 
 ## Usage
-- `python -m mcanitexgen <animation_file> [out_dir]` generates ".mcmeta" for all animations in the animation file
+- `python -m mcanitexgen generate <animation_file> [out_dir]` generates .mcmeta files for all animations in an animation file
+- `python -m mcanitexgen gif <animation_file> [out_dir]` creates gifs for all animations in an animation file
 
 # Example
 We are going to create this animation.<br>
-<div style="text-align:center">
-  <img src="examples/steve/steve.gif" width="100" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
-</div>
+<img src="examples/steve/steve.gif" width="100" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
+
 
 First we have to create the different states of the animation.
 I created a simple "steve.png" file:<br>
