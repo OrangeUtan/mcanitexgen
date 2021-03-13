@@ -1,3 +1,9 @@
+![](https://img.shields.io/badge/python-3.9-blue)
+[![](https://img.shields.io/pypi/v/mcanitexgen)](https://pypi.org/project/mcanitexgen/)
+![](https://img.shields.io/github/license/orangeutan/mcanitexgen)
+![](https://img.shields.io/badge/pre--commit-enabled-green)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 # Minecraft animated texture generator
 Mcanitexgen is a generator for ".mcmeta" files that Minecraft uses to animate textures.<br>
 
