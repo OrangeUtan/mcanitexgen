@@ -1,9 +1,16 @@
 [tool.poetry]
 name = "mcanitexgen"
-version = "0.0.9"
-description = "A texture animation generator for Minecraft .mcmeta files"
+version = "0.1.1"
+description = "An animation generator for Minecraft .mcmeta files"
 authors = ["Oran9eUtan <oran9eutan@gmail.com>"]
 license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/OrangeUtan/mcanitexgen"
+repository = "https://github.com/OrangeUtan/mcanitexgen"
+keywords = ["minecraft", "animation", "mcmeta"]
+include = [
+    "LICENSE"
+]
 
 [tool.poetry.dependencies]
 python = "^3.9"

@@ -22,3 +22,9 @@ def format(c):
 @task
 def test(c):
     os.system("poetry run pytest tests")
+
+
+@task
+def publish(c):
+    os.system("poetry build")
+    os.system("poetry publish")
