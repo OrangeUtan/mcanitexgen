@@ -5,6 +5,7 @@
 ![](https://img.shields.io/badge/mypy-checked-green)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 ![](https://img.shields.io/badge/pre--commit-enabled-green)
+![](https://github.com/orangeutan/mcanitexgen/workflows/test/badge.svg)
 
 # Minecraft animated texture generator
 Mcanitexgen is a generator for ".mcmeta" files that Minecraft uses to animate textures.<br>
@@ -79,5 +80,5 @@ Now run `python -m mcanitexgen steve.animation.py` and Mcanitexgen will create a
   }
 }
 ```
-<br>
-More complex examples can be found in [examples](https://github.com/OrangeUtan/mcanitexgen/tree/master/examples).
+
+More complex examples can be found in the [here](https://github.com/OrangeUtan/mcanitexgen/tree/master/example)
