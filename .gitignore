@@ -28,3 +28,4 @@ share/python-wheels/
 MANIFEST
 bin
 pyvenv.cfg
+.coverage

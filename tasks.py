@@ -28,3 +28,10 @@ def test(c):
 def publish(c):
     os.system("poetry build")
     os.system("poetry publish")
+
+
+@task
+def coverage(c):
+    os.system("poetry run coverage run -m pytest tests")
+    os.system("poetry run coverage report")
+    os.system("poetry run coverage-badge -o coverage.svg -f")

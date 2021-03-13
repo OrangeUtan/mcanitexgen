@@ -25,6 +25,8 @@ mypy = "^0.812"
 hypothesis = "^6.3.4"
 pytest = "^6.2.2"
 isort = "^5.7.0"
+coverage = {extras = ["toml"], version = "^5.5"}
+coverage-badge = "^1.0.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -35,3 +37,7 @@ line-length = 95
 
 [tool.isort]
 line_length = 95
+
+[tool.coverage.run]
+source = ["mcanitexgen"]
+omit = ["mcanitexgen/images2gif.py"]
