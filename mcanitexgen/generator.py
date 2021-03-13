@@ -18,6 +18,9 @@ class GeneratorError(Exception):
 
 def load_animations_from_file(path: Path):
     spec = importlib.util.spec_from_file_location(path.name, path)
+    if not spec:
+        raise GeneratorError(f"Couldn't load animations from '{path}'")
+
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
