@@ -1,9 +1,10 @@
 
 ### Python ###
-# Byte-compiled / optimized / DLL files
-__pycache__/
+# Byte-compiled / optimized / generated / ...
+*/__pycache__/
 *.py[cod]
 *$py.class
+.hypothesis
 
 # Distribution / packaging
 .Python
@@ -27,5 +28,3 @@ share/python-wheels/
 MANIFEST
 bin
 pyvenv.cfg
-mcanitexgen/**/*.animation.yml
-*.mcmeta

@@ -1,51 +1,75 @@
-# mcanitexgen (MC animated texture generator)
-Mcanitexgen is a python generator for complex animated textures. It generates .mcmeta files from .animation.yml files.<br>
-I use this for my personal projects to create animated Java models, like this one (long animation):<br>
-<br>
-<img src="examples/dog/dog.gif" width="300" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
+# Minecraft animated texture generator
+Mcanitexgen is a generator for ".mcmeta" files that Minecraft uses to animate textures.<br>
+
+## The full power of Python
+Mcanitexgen allows you to write texture animations in Python instead of json. Using a programming language allows you to create much more complex animations, like this dog that has 3 textures that are synchronised with each other.
+
+<img src="examples/dog/dog.gif" width="400" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
 
 ## Install
 `pip install mcanitexgen`
 
 ## Usage
-`python -m anitexgen <dir>` where `dir` is the a directory containing animation files.
-Parses all animation files (.animation.yml) in the directory and generates .mcmeta files from them.
+- `python -m mcanitexgen generate <animation_file> [out_dir]` generates .mcmeta files for all animations in an animation file
+- `python -m mcanitexgen gif <animation_file> [out_dir]` creates gifs for all animations in an animation file
 
-## Simple Example
-A simple animation where a head blinks, then winks with the left eye and then with the right eye.
-<br>
-First we create all the different frames of the animation. I'm going to call them "states" here, to not confuse them with the frames of the final product.<br>
-<br>
-<img src="img/anim_example.png" width="100" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
+# Example
+We are going to create this animation.<br>
+<img src="examples/steve/steve.gif" width="100" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
 
-As you can see, our animation has a total of 4 states. but of course we don't want to play them in the order from top to bottom, that would look strange.
-Instead we create an animation file that references the states.
-<br>
-```yaml
-head:
-  texture: "<rel_path>/head.png" # Relative path to the texture
-  
-  # A list of the textures states. Useful to give your states meaningful names.
-  states: 
-    - normal
-    - blink_both # Blinking with both eyes
-    - wink_left # Blinking with only the left eye
-    - wink_right # Blinking with only the right eye
-  
-  # A list of sequences that can be played in the animation.
-  sequences:
-    look_n_blink: # A sequence where the head first looks normal and then blinks shortly
-      - { state: normal, duration: 20 }
-      - { state: blink, duration: 3 }
-  
-  # The final animation
-  animation: 
-    - { sequence: look_n_blink, repeat: 3 } # References the 'look_n_blink' sequence and plays it 3 times
-    - { state: wink_left, duration: 10 }
-    - { sequence: look_n_blink }
-    - { state: normal, duration: 20 }
-    - { state: wink_right, duration: 10 }
+
+First we have to create the different states of the animation.
+I created a simple "steve.png" file:<br>
+<img src="examples/steve/steve.png" width="100" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
+
+Top to Bottom: Looking normal, blinking, wink with right eye, wink with left eye.<br>
+Now we can create the animation file "steve.animation.py" that uses these states to create an animation:<br>
+```python
+from mcanitexgen import animation, TextureAnimation, State, Sequence
+
+@animation("steve.png")
+class Steve(TextureAnimation):
+  NORMAL = State(0)  # Look normal
+  BLINK = State(1)
+  WINK_RIGHT = State(2)  # Wink with right eye
+  WINK_LEFT = State(3)  # Wink with left eye
+
+  # Look normal and blink shortly
+  look_and_blink = Sequence(NORMAL(duration=60), BLINK(duration=2))
+
+  # The main Sequence used to create the animation
+  main = Sequence(
+    3 * look_and_blink,  # Play "look_and_blink" Sequence 3 times
+    NORMAL(duration=60),
+    WINK_LEFT(duration=30),
+    look_and_blink,
+    NORMAL(duration=60),
+    WINK_RIGHT(duration=30),
+  )
 ```
-Mcanitexgen then generates the output "<rel_path>/head.png.mcmeta" which Minecraft uses to animate textures.<br>
+
+Now run `python -m mcanitexgen steve.animation.py` and Mcanitexgen will create a "steve.png.mcmeta" file:
+```json
+{
+  "animation": {
+      "interpolate": false,
+      "frametime": 1,
+      "frames": [
+        {"index": 0, "time": 60},
+        {"index": 1, "time": 2},
+        {"index": 0, "time": 60},
+        {"index": 1, "time": 2},
+        {"index": 0, "time": 60},
+        {"index": 1, "time": 2},
+        {"index": 0, "time": 60},
+        {"index": 3, "time": 30},
+        {"index": 0, "time": 60},
+        {"index": 1, "time": 2},
+        {"index": 0, "time": 60},
+        {"index": 2, "time": 30}
+      ]
+  }
+}
+```
 <br>
 More complex examples can be found in [examples](https://github.com/OrangeUtan/mcanitexgen/tree/master/examples).
