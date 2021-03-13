@@ -104,7 +104,7 @@ class Animation:
 
         self.end = other.end
         self.frames += other.frames
-        self.marks |= other.marks
+        self.marks.update(other.marks)
 
     def add_frame(self, index: int, start: int, end: int):
         if end - start <= 0:
