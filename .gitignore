@@ -28,5 +28,3 @@ share/python-wheels/
 MANIFEST
 bin
 pyvenv.cfg
-mcanitexgen/**/*.animation.yml
-*.mcmeta

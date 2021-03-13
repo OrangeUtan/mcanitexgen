@@ -35,7 +35,7 @@ def get_texture_animations_from_module(module: ModuleType):
     }
 
 
-def animation(texture: Path, main_sequence: str = "main"):
+def animation(texture: Path, main_sequence: str = "main", interpolate=False, frametime=1):
     def wrapper(cls: Type[TextureAnimation]):
         cls.sequences = {}
         cls.states = {}
@@ -45,9 +45,11 @@ def animation(texture: Path, main_sequence: str = "main"):
             elif isinstance(val, Sequence):
                 val.name = name
                 cls.sequences[name] = val
+        cls.root = cls.sequences[main_sequence]
 
         cls.texture = texture if isinstance(texture, Path) else Path(texture)
-        cls.root = cls.sequences[main_sequence]
+        cls.interpolate = interpolate
+        cls.frametime = frametime
 
         animation = unweighted_sequence_to_animation(cls.root, 0)
         cls.start = animation.start
@@ -61,6 +63,9 @@ def animation(texture: Path, main_sequence: str = "main"):
 
 class TextureAnimation:
     texture: Path
+    interpolate: bool
+    frametime: int
+
     sequences: dict[str, Sequence]
     states: dict[int, State]
     root: Sequence

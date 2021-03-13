@@ -27,7 +27,11 @@ def generate(
     for animation in texture_animations.values():
         with Path(out_dir, f"{animation.texture}.mcmeta").open("w") as f:
             data = {
-                "animation": {"interpolate": False, "frametime": 1, "frames": animation.frames}
+                "animation": {
+                    "interpolate": animation.interpolate,
+                    "frametime": animation.frametime,
+                    "frames": animation.frames,
+                }
             }
 
             json.dump(data, f)
@@ -68,7 +72,7 @@ def gif(
         gif_path = Path(out_dir, f"{os.path.splitext(animation.texture.name)[0]}.gif")
 
         states = get_animation_states(PIL.Image.open(texture_path))
-        frametime = 1 / 20
+        frametime = 1 / 20 * animation.frametime
 
         frames: list[Image] = []
         durations = []
