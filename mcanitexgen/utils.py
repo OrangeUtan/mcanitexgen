@@ -1,13 +1,5 @@
 import math
-from pathlib import Path
 from typing import Generator, Iterable
-
-import ruamel.yaml as yaml
-
-
-def load_yaml_file(path: Path):
-    with path.open("r", encoding="utf-8") as f:
-        return yaml.load(f, Loader=yaml.Loader)
 
 
 def round_half_away_from_zero(num) -> int:

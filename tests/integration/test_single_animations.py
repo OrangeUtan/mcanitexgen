@@ -1,5 +1,3 @@
-import ruamel.yaml as yaml
-
 from mcanitexgen import Sequence, State, animation
 from mcanitexgen.generator import Animation, TextureAnimation
 
