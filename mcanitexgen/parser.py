@@ -75,21 +75,22 @@ class Sequence:
 
 
 class Time:
+    @staticmethod
     def from_args(
         start: Optional[int] = None,
         end: Optional[int] = None,
         duration: Optional[int] = None,
         weight: Optional[int] = None,
     ):
-        if weight != None:
+        if weight is not None:
             if weight <= 0:
                 raise ParserError(f"Weight of time must be at least 1")
             if start or end or duration:
                 raise ParserError(f"Weighted time can't have start, end or duration")
             return Weight(weight)
-        elif start != None or end != None:
+        elif start is not None or end is not None:
             return Timeframe(start, end, duration)
-        elif duration != None:
+        elif duration is not None:
             if duration <= 0:
                 raise ParserError(f"Duration must be at least 1")
             return Duration(duration)

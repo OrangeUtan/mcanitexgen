@@ -9,7 +9,16 @@ from typing import Optional, Type
 
 from mcanitexgen import utils
 
-from .parser import Action, Duration, Sequence, SequenceAction, State, Timeframe
+from .parser import (
+    Action,
+    Duration,
+    Sequence,
+    SequenceAction,
+    State,
+    StateAction,
+    Timeframe,
+    Weight,
+)
 
 
 class GeneratorError(Exception):
@@ -18,11 +27,11 @@ class GeneratorError(Exception):
 
 def load_animations_from_file(path: Path):
     spec = importlib.util.spec_from_file_location(path.name, path)
-    if not spec:
+    if spec is None or spec.loader is None:
         raise GeneratorError(f"Couldn't load animations from '{path}'")
 
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    spec.loader.exec_module(module)  # type: ignore
 
     return get_texture_animations_from_module(module)
 
@@ -31,7 +40,7 @@ def get_texture_animations_from_module(module: ModuleType):
     return {
         k: v
         for k, v in module.__dict__.items()
-        if isinstance(v, Type) and issubclass(v, TextureAnimation) and v != TextureAnimation
+        if isinstance(v, type) and issubclass(v, TextureAnimation) and v != TextureAnimation
     }
 
 
@@ -145,7 +154,7 @@ def weighted_sequence_to_animation(sequence: Sequence, start: int, duration: int
     )
 
     for action in sequence.actions:
-        if action.is_weighted:
+        if isinstance(action.time, Weight):
             action_start = animation.end
             action_duration = duration_distributor.take(int(action.time))
         else:
@@ -161,24 +170,24 @@ def weighted_sequence_to_animation(sequence: Sequence, start: int, duration: int
     return animation
 
 
-def get_unweighted_action_timeframe(action: Action, action_start: int):
+def get_unweighted_action_timeframe(
+    action: Action, action_start: int
+) -> tuple[int, Optional[int]]:
     if isinstance(action.time, Duration):
-        action_duration = int(action.time)
+        return (action_start, int(action.time))
     elif isinstance(action.time, Timeframe):
         start, end, duration = action.time.start, action.time.end, action.time.duration
         if start and end and duration:
             action_start = start
-            action_duration = duration
+            return (action_start, duration)
         elif not start and end and not duration:
-            action_duration = end - action_start
+            return (action_start, end - action_start)
         else:
             raise GeneratorError(
                 f"Unexpected combination of start, end, duration: '{start}', '{end}', '{duration}'"
             )
     else:
-        action_duration = None
-
-    return (action_start, action_duration)
+        return (action_start, None)
 
 
 def append_action_to_animation(
@@ -186,9 +195,11 @@ def append_action_to_animation(
 ):
     if isinstance(action, SequenceAction):
         anim.append(sequence_action_to_animation(action, start, duration))
-    else:
+    elif isinstance(action, StateAction):
         assert duration is not None
         anim.add_frame(action.state.index, start, start + duration)
+    else:
+        raise TypeError(f"Unknown Action type: {action}")
 
     # Add mark
     if action.mark:
