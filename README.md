@@ -1,5 +1,5 @@
 ![](https://img.shields.io/github/license/orangeutan/mcanitexgen)
-![](https://img.shields.io/badge/python-3.9-blue)
+![](https://img.shields.io/badge/python-3.8|3.9-blue)
 [![](https://img.shields.io/pypi/v/mcanitexgen)](https://pypi.org/project/mcanitexgen/)
 ![](./coverage.svg)
 ![](https://img.shields.io/badge/mypy-checked-green)
