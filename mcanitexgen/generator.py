@@ -46,7 +46,7 @@ def animation(texture: Path, main_sequence: str = "main"):
                 val.name = name
                 cls.sequences[name] = val
 
-        cls.texture = texture
+        cls.texture = texture if isinstance(texture, Path) else Path(texture)
         cls.root = cls.sequences[main_sequence]
 
         animation = unweighted_sequence_to_animation(cls.root, 0)
