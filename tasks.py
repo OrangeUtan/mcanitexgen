@@ -21,4 +21,4 @@ def format(c):
 
 @task
 def test(c):
-    os.system("poetry run py -m pytest")
+    os.system("poetry run pytest tests")
