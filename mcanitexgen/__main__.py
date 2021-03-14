@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 from pathlib import Path
@@ -17,24 +19,16 @@ def generate(
         None, help="Directory animation files will be generated in"
     ),
 ):
-    animations_file: Path = Path(animations_file)
-    if not animations_file.exists():
-        raise FileNotFoundError(animations_file)
-    out_dir: Path = Path(out_dir) if out_dir else animations_file.parent
-    out_dir.mkdir(parents=True, exist_ok=True)
+    animations_path: Path = Path(animations_file)
+    if not animations_path.exists():
+        raise FileNotFoundError(animations_path)
+    out_dir_path: Path = Path(out_dir) if out_dir else animations_path.parent
+    out_dir_path.mkdir(parents=True, exist_ok=True)
 
-    texture_animations = load_animations_from_file(animations_file)
+    texture_animations = load_animations_from_file(animations_path)
     for animation in texture_animations.values():
-        with Path(out_dir, f"{animation.texture}.mcmeta").open("w") as f:
-            data = {
-                "animation": {
-                    "interpolate": animation.interpolate,
-                    "frametime": animation.frametime,
-                    "frames": animation.frames,
-                }
-            }
-
-            json.dump(data, f)
+        with Path(out_dir_path, f"{animation.texture}.mcmeta").open("w") as f:
+            json.dump(animation.to_mcmeta(), f)
 
 
 def get_animation_states(img):
@@ -61,15 +55,15 @@ def gif(
 
     import mcanitexgen.images2gif
 
-    animations_file: Path = Path(animations_file)
-    if not animations_file.exists():
-        raise FileNotFoundError(animations_file)
-    out_dir: Path = Path(out_dir) if out_dir else animations_file.parent
-    out_dir.mkdir(parents=True, exist_ok=True)
+    animations_path: Path = Path(animations_file)
+    if not animations_path.exists():
+        raise FileNotFoundError(animations_path)
+    out_dir_path: Path = Path(out_dir) if out_dir else animations_path.parent
+    out_dir_path.mkdir(parents=True, exist_ok=True)
 
-    for animation in load_animations_from_file(animations_file).values():
-        texture_path = Path(animations_file.parent, animation.texture)
-        gif_path = Path(out_dir, f"{os.path.splitext(animation.texture.name)[0]}.gif")
+    for animation in load_animations_from_file(animations_path).values():
+        texture_path = Path(animations_path.parent, animation.texture)
+        gif_path = Path(out_dir_path, f"{os.path.splitext(animation.texture.name)[0]}.gif")
 
         states = get_animation_states(PIL.Image.open(texture_path))
         frametime = 1 / 20 * animation.frametime

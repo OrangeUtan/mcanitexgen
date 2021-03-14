@@ -95,6 +95,16 @@ class TextureAnimation(metaclass=TextureAnimationMeta):
 
     animation: Animation
 
+    @classmethod
+    def to_mcmeta(cls):
+        return {
+            "animation": {
+                "interpolate": cls.interpolate,
+                "frametime": cls.frametime,
+                "frames": cls.animation.frames,
+            }
+        }
+
 
 @dataclass
 class Animation:
