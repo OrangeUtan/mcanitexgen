@@ -21,9 +21,3 @@ Each texture animates one part of a custom dog model.
     <th><img src="dream.png" height="500" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/></th>
   </tr>
 </table>
-<div>
-  
-  
-  
-  
-<div>
