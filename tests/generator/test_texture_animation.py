@@ -1,4 +1,7 @@
 import pytest
+from hypothesis import given, settings
+from hypothesis.strategies import builds, integers
+from hypothesis.strategies._internal.core import lists
 
 from mcanitexgen import generator
 from mcanitexgen.generator import Animation, TextureAnimation
@@ -38,3 +41,27 @@ class Test_to_mcmeta:
         TestAnim.animation = Animation(0, 100, frames)
 
         assert TestAnim.to_mcmeta() == expected_mcmeta
+
+
+class Test_combine_consecutive_frames:
+    @pytest.mark.parametrize(
+        "frames, expected_frames",
+        [
+            ([frame(0, 10), frame(0, 10)], [frame(0, 20)]),
+            (
+                [frame(1, 10), frame(0, 20), frame(0, 1), frame(2, 20)],
+                [frame(1, 10), frame(0, 21), frame(2, 20)],
+            ),
+        ],
+    )
+    def test(self, frames, expected_frames):
+        assert list(TextureAnimation.combine_consecutive_frames(frames)) == expected_frames
+
+    @given(lists(builds(frame, integers(min_value=0), integers(min_value=1))))
+    @settings(max_examples=30)
+    def test_fuzzy(self, frames):
+        combined_frames = list(TextureAnimation.combine_consecutive_frames(frames))
+
+        assert sum(map(lambda f: f["time"], frames)) == sum(
+            map(lambda f: f["time"], combined_frames)
+        )
