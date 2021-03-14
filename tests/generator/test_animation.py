@@ -91,3 +91,21 @@ class Test_add_frame:
     def test_fill_time_gap(self, anim: Animation, index, start, end, result):
         anim.add_frame(index, start, end)
         assert anim == result
+
+    @pytest.mark.parametrize(
+        "start, end",
+        [
+            (0, 0),
+            (10, 10),
+            (12, 11),
+            (-4, -5),
+            (-6, -5),
+        ],
+    )
+    def test_invalid_start_and_end(self, start, end):
+        anim = Animation(0, 0)
+
+        with pytest.raises(
+            GeneratorError, match=f"Illegal start and end for frame: '{start}' '{end}'"
+        ):
+            anim.add_frame(0, start, end)
