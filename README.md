@@ -81,4 +81,4 @@ Now run `python -m mcanitexgen steve.animation.py` and Mcanitexgen will create a
 }
 ```
 
-More complex examples can be found in the [here](https://github.com/OrangeUtan/mcanitexgen/tree/master/example)
+More complex examples can be found in the [here](https://github.com/OrangeUtan/mcanitexgen/tree/master/examples)
