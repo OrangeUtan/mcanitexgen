@@ -372,6 +372,8 @@ class GifWriter:
         for im in images:
             if isinstance(im, Image.Image):
                 images2.append(im)
+                if im.mode == "RGBA":
+                    self.transparency = True
             elif np and isinstance(im, np.ndarray):
                 if im.ndim==3 and im.shape[2]==3:
                     im = Image.fromarray(im,'RGB')

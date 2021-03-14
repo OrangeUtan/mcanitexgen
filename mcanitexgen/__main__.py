@@ -83,7 +83,7 @@ def gif(
         )
 
         mcanitexgen.images2gif.writeGif(
-            gif_path, images=frames, duration=durations, subRectangles=True, dispose=2
+            gif_path, images=frames, duration=durations, subRectangles=False, dispose=2
         )
 
 
