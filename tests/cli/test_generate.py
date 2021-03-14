@@ -58,7 +58,7 @@ def test_out_dir(out_dir, expected_mcmeta_path, steve_mcmeta):
 
     generated_mcmeta: list[dict] = []
 
-    def dump(json_data, file_pointer):
+    def dump(json_data, file_pointer, **kwargs):
         generated_mcmeta.append(json_data)
 
     with patch("pathlib.Path.mkdir", new=mkdir):

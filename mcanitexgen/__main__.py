@@ -44,6 +44,9 @@ def generate(
     out_dir: Optional[str] = typer.Argument(
         None, help="Directory animation files will be generated in"
     ),
+    no_indent: int = typer.Option(
+        False, help="Pretty print json with indentation", is_flag=True, flag_value=True
+    ),
 ):
     animations_path: Path = Path(animations_file)
     if not animations_path.exists():
@@ -54,7 +57,7 @@ def generate(
     texture_animations = load_animations_from_file(animations_path)
     for animation in texture_animations.values():
         with Path(out_dir_path, f"{animation.texture}.mcmeta").open("w") as f:
-            json.dump(animation.to_mcmeta(), f)
+            json.dump(animation.to_mcmeta(), f, indent=None if no_indent else 2)
 
 
 @app.command(help="Create gifs for all animations in an animation file")
