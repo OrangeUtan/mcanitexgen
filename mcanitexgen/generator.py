@@ -5,7 +5,7 @@ import importlib.util
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
-from typing import Optional, Type
+from typing import Optional, Type, Union
 
 from mcanitexgen import utils
 
@@ -44,7 +44,9 @@ def get_texture_animations_from_module(module: ModuleType):
     }
 
 
-def animation(texture: Path, main_sequence: str = "main", interpolate=False, frametime=1):
+def animation(
+    texture: Union[str, Path], main_sequence: str = "main", interpolate=False, frametime=1
+):
     def wrapper(cls: Type[TextureAnimation]):
         cls.sequences = {}
         cls.states = {}
