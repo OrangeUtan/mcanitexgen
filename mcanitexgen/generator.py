@@ -60,17 +60,31 @@ def animation(texture: Path, main_sequence: str = "main", interpolate=False, fra
         cls.interpolate = interpolate
         cls.frametime = frametime
 
-        animation = unweighted_sequence_to_animation(cls.root, 0)
-        cls.start = animation.start
-        cls.end = animation.end
-        cls.frames = animation.frames
-        cls.marks = animation.marks
+        cls.animation = unweighted_sequence_to_animation(cls.root, 0)
         return cls
 
     return wrapper
 
 
-class TextureAnimation:
+class TextureAnimationMeta(type):
+    @property
+    def start(self):
+        return self.animation.start
+
+    @property
+    def end(self):
+        return self.animation.end
+
+    @property
+    def frames(self):
+        return self.animation.frames
+
+    @property
+    def marks(self):
+        return self.animation.marks
+
+
+class TextureAnimation(metaclass=TextureAnimationMeta):
     texture: Path
     interpolate: bool
     frametime: int
@@ -79,10 +93,7 @@ class TextureAnimation:
     states: dict[int, State]
     root: Sequence
 
-    start: int
-    end: int
-    frames: list[dict]
-    marks: dict[str, Mark]
+    animation: Animation
 
 
 @dataclass
@@ -107,7 +118,7 @@ class Animation:
         self.marks.update(other.marks)
 
     def add_frame(self, index: int, start: int, end: int):
-        if end - start <= 0:
+        if start < 0 or end < 0 or end - start <= 0:
             raise GeneratorError(f"Illegal start and end for frame: '{start}' '{end}'")
 
         if len(self.frames) == 0:

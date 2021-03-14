@@ -31,9 +31,7 @@ def test_simple_blinking():
         ],
     )
 
-    assert Head.start == expected_anim.start
-    assert Head.end == expected_anim.end
-    assert Head.frames == expected_anim.frames
+    assert Head.animation == expected_anim
     assert sum(map(lambda f: f["time"], Head.frames)) == expected_anim.end
 
 
@@ -62,9 +60,7 @@ def test_weighted_blinking():
         ],
     )
 
-    assert Head.end == expected_anim.end
-    assert Head.start == expected_anim.start
-    assert Head.frames == expected_anim.frames
+    assert Head.animation == expected_anim
     assert sum(map(lambda f: f["time"], Head.frames)) == expected_anim.end
 
 
@@ -98,10 +94,7 @@ def test_weighted_blinking_2():
         ],
     )
 
-    assert Head.start == expected_anim.start
-    assert Head.end == expected_anim.end
-    assert len(Head.frames) == len(expected_anim.frames)
-    assert Head.frames == expected_anim.frames
+    assert Head.animation == expected_anim
     assert sum(map(lambda f: f["time"], Head.frames)) == expected_anim.end
 
 
@@ -126,8 +119,5 @@ def test_unweighted_seq_in_weighted_seq():
         ],
     )
 
-    assert Head.start == expected_anim.start
-    assert Head.end == expected_anim.end
-    assert len(Head.frames) == len(expected_anim.frames)
-    assert Head.frames == expected_anim.frames
+    assert Head.animation == expected_anim
     assert sum(map(lambda f: f["time"], Head.frames)) == expected_anim.end
