@@ -67,12 +67,13 @@ class Test_unweighted_sequence_to_animation:
         assert animation == expected_animation
 
 
-class Test_Nested_unweighted_sequence_to_animation:
-    def unweighted_sequence():
-        s = Sequence(StateAction(State(0), Duration(10)), StateAction(State(1), Duration(5)))
-        s.name = "unweighted"
-        return s
+def unweighted_sequence():
+    s = Sequence(StateAction(State(0), Duration(10)), StateAction(State(1), Duration(5)))
+    s.name = "unweighted"
+    return s
 
+
+class Test_Nested_unweighted_sequence_to_animation:
     @pytest.mark.parametrize(
         "actions, expected_anim",
         [
@@ -117,7 +118,7 @@ class Test_Nested_unweighted_sequence_to_animation:
     def test_pass_duration_to_unweighted_sequence(self):
         sequence = Sequence(
             SequenceAction(
-                Test_Nested_unweighted_sequence_to_animation.unweighted_sequence(),
+                unweighted_sequence(),
                 Duration("100"),
             ),
         )
@@ -126,20 +127,3 @@ class Test_Nested_unweighted_sequence_to_animation:
             GeneratorError, match="Passing duration to unweighted sequence 'unweighted'"
         ):
             generator.unweighted_sequence_to_animation(sequence, 0)
-
-
-class Test_sequence_action_to_animation:
-    def unweighted_sequence():
-        s = Sequence(StateAction(State(0), Duration(10)), StateAction(State(1), Duration(5)))
-        s.name = "unweighted"
-        return s
-
-    def test_pass_duration_to_unweighted_sequence(self):
-        action = SequenceAction(
-            Test_sequence_action_to_animation.unweighted_sequence(), Duration(100)
-        )
-
-        with pytest.raises(
-            GeneratorError, match="Passing duration to unweighted sequence 'unweighted'"
-        ):
-            generator.sequence_action_to_animation(action, 0, 100)
