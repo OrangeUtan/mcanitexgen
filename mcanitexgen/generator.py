@@ -5,7 +5,7 @@ import importlib.util
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
-from typing import Optional, Type, Union
+from typing import Iterator, Optional, Type, Union
 
 from mcanitexgen import utils
 
@@ -98,12 +98,28 @@ class TextureAnimation(metaclass=TextureAnimationMeta):
     animation: Animation
 
     @classmethod
+    def combine_consecutive_frames(cls, frames: Iterator[dict]):
+        prev_frame = None
+        for frame in frames:
+            if prev_frame:
+                if prev_frame["index"] == frame["index"]:
+                    prev_frame["time"] += frame["time"]
+                else:
+                    yield prev_frame
+                    prev_frame = frame.copy()
+            else:
+                prev_frame = frame.copy()
+
+        if prev_frame:
+            yield prev_frame
+
+    @classmethod
     def to_mcmeta(cls):
         return {
             "animation": {
                 "interpolate": cls.interpolate,
                 "frametime": cls.frametime,
-                "frames": cls.animation.frames,
+                "frames": list(cls.combine_consecutive_frames(cls.animation.frames)),
             }
         }
 
