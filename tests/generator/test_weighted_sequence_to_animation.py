@@ -1,7 +1,7 @@
 import pytest
 
 from mcanitexgen import generator
-from mcanitexgen.generator import Animation, GeneratorError
+from mcanitexgen.generator import Animation
 from mcanitexgen.parser import Duration, Sequence, SequenceAction, State, StateAction, Weight
 
 
@@ -9,7 +9,7 @@ def frame(index: int, time: int):
     return {"index": index, "time": time}
 
 
-class Test_weighted_sequence_to_animation:
+class Test_Weighted:
     @pytest.mark.parametrize(
         "actions, duration, expected_anim",
         [
@@ -42,21 +42,23 @@ class Test_weighted_sequence_to_animation:
         assert sum(map(lambda f: f["time"], animation.frames)) == duration
 
 
-class Test_Nested_WeightedSequenceToAnimation:
-    def weighted_sequence_z():
-        s = Sequence(StateAction(State(0), Weight(1)), StateAction(State(1), Weight(1)))
-        s.name = "weighted_z"
-        return s
+def weighted_sequence_z():
+    s = Sequence(StateAction(State(0), Weight(1)), StateAction(State(1), Weight(1)))
+    s.name = "weighted_z"
+    return s
 
-    def weighted_sequence_y():
-        s = Sequence(
-            StateAction(State(0), Weight(1)),
-            StateAction(State(1), Weight(1)),
-            StateAction(State(2), Weight(1)),
-        )
-        s.name = "weighted_y"
-        return s
 
+def weighted_sequence_y():
+    s = Sequence(
+        StateAction(State(0), Weight(1)),
+        StateAction(State(1), Weight(1)),
+        StateAction(State(2), Weight(1)),
+    )
+    s.name = "weighted_y"
+    return s
+
+
+class Test_Nested_Weighted:
     @pytest.mark.parametrize(
         "actions, expected_anim",
         [
@@ -95,16 +97,58 @@ class Test_Nested_WeightedSequenceToAnimation:
         assert animation == Animation(0, 100, [frame(0, 100)])
 
 
-class Test_sequence_action_to_animation:
-    def weighted_sequence():
-        s = Sequence(StateAction(State(0), Weight(1)), StateAction(State(1), Weight(1)))
-        s.name = "weighted"
-        return s
+class Test_Mixed:
+    @pytest.mark.parametrize(
+        "actions, duration, expected_anim",
+        [
+            (
+                [StateAction(State(0), Weight(1)), StateAction(State(1), Duration(10))],
+                100,
+                Animation(0, 100, [frame(0, 90), frame(1, 10)]),
+            ),
+            (
+                [StateAction(State(0), Weight(1)), StateAction(State(1), Duration(90))],
+                100,
+                Animation(0, 100, [frame(0, 10), frame(1, 90)]),
+            ),
+            (
+                [
+                    StateAction(State(0), Weight(1)),
+                    StateAction(State(2), Duration(10)),
+                    StateAction(State(1), Weight(1)),
+                ],
+                100,
+                Animation(0, 100, [frame(0, 45), frame(2, 10), frame(1, 45)]),
+            ),
+        ],
+    )
+    def test(self, actions, duration, expected_anim):
+        sequence = Sequence(*actions)
 
-    def test_dont_pass_duration_to_weighted_sequence(self):
-        action = SequenceAction(Test_sequence_action_to_animation.weighted_sequence())
+        animation = generator.weighted_sequence_to_animation(sequence, 0, duration)
+        assert animation == expected_anim
 
-        with pytest.raises(
-            GeneratorError, match="Didn't pass duration to weighted sequence 'weighted'"
-        ):
-            generator.sequence_action_to_animation(action, 0, None)
+
+def mixed_sequence():
+    return Sequence(
+        StateAction(State(0), Weight(1)),
+        StateAction(State(1), Duration(10)),
+        StateAction(State(2), Weight(1)),
+    )
+
+
+class Test_Nested_Mixed:
+    @pytest.mark.parametrize(
+        "actions, expected_anim",
+        [
+            (
+                [SequenceAction(mixed_sequence(), Duration(100))],
+                Animation(0, 100, [frame(0, 45), frame(1, 10), frame(2, 45)]),
+            ),
+        ],
+    )
+    def test(self, actions, expected_anim):
+        sequence = Sequence(*actions)
+
+        animation = generator.unweighted_sequence_to_animation(sequence, 0)
+        assert animation == expected_anim

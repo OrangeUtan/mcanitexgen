@@ -29,3 +29,4 @@ MANIFEST
 bin
 pyvenv.cfg
 .coverage
+coverage.xml
