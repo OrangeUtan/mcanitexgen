@@ -21,17 +21,12 @@ def format(c):
 
 @task
 def test(c):
-    os.system("poetry run pytest tests")
+    os.system("poetry run pytest --cov=mcanitexgen --cov-report=xml")
+    os.system("poetry run coverage report")
+    os.system("poetry run coverage-badge -o coverage.svg -f")
 
 
 @task
 def publish(c):
     os.system("poetry build")
     os.system("poetry publish")
-
-
-@task
-def coverage(c):
-    os.system("poetry run coverage run -m pytest tests")
-    os.system("poetry run coverage report")
-    os.system("poetry run coverage-badge -o coverage.svg -f")
