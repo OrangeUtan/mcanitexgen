@@ -9,6 +9,8 @@ A complex 3 part animation:
 Each texture animates one part of a custom dog model.
 
 ## Textures
-<img src="head.png" height="500" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
-<img src="tail_and_hindlegs.png" height="500" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
-<img src="dream.png" height="500" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
+<div>
+  <img src="head.png" height="500" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
+  <img src="tail_and_hindlegs.png" height="500" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
+  <img src="dream.png" height="500" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
+<div>
