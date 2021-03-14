@@ -21,3 +21,19 @@ Each texture animates one part of a custom dog model.
     <th><img src="dream.png" height="500" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/></th>
   </tr>
 </table>
+
+## Animated textures
+<table>
+  <tr>
+    <th>head</th>
+    <th>tail_and_hindlegs</th>
+    <th>dream</th>
+  </tr>
+  <tr>
+    <th><img src="head.gif" width="200" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/></th>
+    <th><img src="tail_and_hindlegs.gif" width="200" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/></th>
+    <th><img src="dream.gif" width="200" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/></th>
+  </tr>
+</table>
+
+These are the resulting animated textures (rendered as a gif for visualization)
