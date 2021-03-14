@@ -21,9 +21,9 @@ def format(c):
 
 @task
 def test(c):
-    os.system("poetry run pytest --cov=mcanitexgen --cov-report=xml")
-    os.system("poetry run coverage report")
-    os.system("poetry run coverage-badge -o coverage.svg -f")
+    if os.system("poetry run pytest --cov=mcanitexgen --cov-report=xml") == 0:
+        os.system("poetry run coverage report")
+        os.system("poetry run coverage-badge -o coverage.svg -f")
 
 
 @task
