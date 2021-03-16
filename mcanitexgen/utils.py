@@ -5,10 +5,7 @@ from typing import Generator, Iterable
 def round_half_away_from_zero(num) -> int:
     """ y = sign(x) * floor(|x|+0.5) """
 
-    if num >= 0:
-        return math.floor(num + 0.5)
-    else:
-        return math.floor(num - 0.5)
+    return int(math.copysign(math.floor(abs(num) + 0.5), num))
 
 
 def partition_by_weights(
@@ -40,6 +37,9 @@ class DurationDistributor:
         self.remaining_weight = total_weight
 
     def take(self, weight: int):
+        if self.is_empty():
+            raise Exception("Trying to take from empty Distributor")
+
         weighted_amount = int(
             round_half_away_from_zero((weight * self.remaining) / self.remaining_weight)
         )
