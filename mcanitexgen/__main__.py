@@ -35,7 +35,21 @@ def convert_to_gif_frames(frames: list[dict], states: list[Image], frametime: fl
         yield (states[frame["index"]], frametime * frame["time"])
 
 
-app = typer.Typer()
+def version_callback(value: bool):
+    if value:
+        typer.echo(f"Mcanitexgen: {mcanitexgen.__version__}")
+        raise typer.Exit()
+
+
+def main(
+    version: bool = typer.Option(
+        None, "--version", "-v", callback=version_callback, is_eager=True
+    )
+):
+    pass
+
+
+app = typer.Typer(callback=main)
 
 
 @app.command(help="Generate .mcmeta files for all animations in an animation file")
