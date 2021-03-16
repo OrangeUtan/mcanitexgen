@@ -5,8 +5,14 @@ from typing import Tuple
 from unittest.mock import patch
 
 import pytest
+from typer.testing import CliRunner
 
 from mcanitexgen import __main__ as cli
+
+
+@pytest.fixture
+def runner():
+    return CliRunner()
 
 
 @pytest.fixture
@@ -33,19 +39,21 @@ def steve_mcmeta():
     }
 
 
-def test_animation_file_doesnt_exist():
-    with pytest.raises(FileNotFoundError):
-        cli.generate("doesnt_exist", None)
+def test_animation_file_doesnt_exist(runner: CliRunner):
+    result = runner.invoke(cli.app, "generate doesnt_exist")
+
+    assert result.exit_code == 2
+    assert "does not exist" in result.stdout
 
 
 @pytest.mark.parametrize(
     "out_dir, expected_mcmeta_path",
     [
-        (None, "tests/cli/res/steve.png.mcmeta"),
+        ("", "tests/cli/res/steve.png.mcmeta"),
         ("build/generated", "build/generated/steve.png.mcmeta"),
     ],
 )
-def test_out_dir(out_dir, expected_mcmeta_path, steve_mcmeta):
+def test_out_dir(out_dir, expected_mcmeta_path, steve_mcmeta, runner: CliRunner):
     mcmeta_paths = []
 
     def mkdir(*args, **kwargs):
@@ -64,7 +72,7 @@ def test_out_dir(out_dir, expected_mcmeta_path, steve_mcmeta):
     with patch("pathlib.Path.mkdir", new=mkdir):
         with patch("pathlib.Path.open", new=open):
             with patch("json.dump", new=dump):
-                cli.generate("tests/cli/res/steve.animation.py", out_dir)
+                runner.invoke(cli.app, f"generate tests/cli/res/steve.animation.py {out_dir}")
 
     assert len(mcmeta_paths) == 1
     assert mcmeta_paths[0] == Path(expected_mcmeta_path)

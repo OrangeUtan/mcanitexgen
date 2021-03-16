@@ -54,23 +54,23 @@ app = typer.Typer(callback=main)
 
 @app.command(help="Generate .mcmeta files for all animations in an animation file")
 def generate(
-    animations_file: str,
-    out_dir: Optional[str] = typer.Argument(
-        None, help="Directory animation files will be generated in"
+    file: Path = typer.Argument(..., exists=True, dir_okay=False, readable=True),
+    out_dir: Optional[Path] = typer.Argument(
+        None,
+        help="Directory animation files will be generated in",
+        file_okay=False,
+        writable=True,
     ),
     no_indent: int = typer.Option(
         False, help="Pretty print json with indentation", is_flag=True, flag_value=True
     ),
 ):
-    animations_path: Path = Path(animations_file)
-    if not animations_path.exists():
-        raise FileNotFoundError(animations_path)
-    out_dir_path: Path = Path(out_dir) if out_dir else animations_path.parent
-    out_dir_path.mkdir(parents=True, exist_ok=True)
+    out_dir = out_dir if out_dir else file.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    texture_animations = load_animations_from_file(animations_path)
+    texture_animations = load_animations_from_file(file)
     for animation in texture_animations.values():
-        with Path(out_dir_path, f"{animation.texture}.mcmeta").open("w") as f:
+        with Path(out_dir, f"{animation.texture}.mcmeta").open("w") as f:
             json.dump(animation.to_mcmeta(), f, indent=None if no_indent else 2)
 
 
