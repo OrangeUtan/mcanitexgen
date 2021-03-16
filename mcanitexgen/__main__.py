@@ -76,20 +76,17 @@ def generate(
 
 @app.command(help="Create gifs for all animations in an animation file")
 def gif(
-    animations_file: str,
-    out_dir: Optional[str] = typer.Argument(
-        None, help="Directory gif files will be generated in"
+    file: Path = typer.Argument(..., exists=True, dir_okay=False, readable=True),
+    out_dir: Optional[Path] = typer.Argument(
+        None, help="Directory gif files will be generated in", file_okay=False, writable=True
     ),
 ):
-    animations_path: Path = Path(animations_file)
-    if not animations_path.exists():
-        raise FileNotFoundError(animations_path)
-    out_dir_path: Path = Path(out_dir) if out_dir else animations_path.parent
-    out_dir_path.mkdir(parents=True, exist_ok=True)
+    out_dir = out_dir if out_dir else file.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    for animation in load_animations_from_file(animations_path).values():
-        texture_path = Path(animations_path.parent, animation.texture)
-        gif_path = Path(out_dir_path, f"{os.path.splitext(animation.texture.name)[0]}.gif")
+    for animation in load_animations_from_file(file).values():
+        texture_path = Path(file.parent, animation.texture)
+        gif_path = Path(out_dir, f"{os.path.splitext(animation.texture.name)[0]}.gif")
 
         states = get_animation_states_from_texture(PIL.Image.open(texture_path))
         frames, durations = zip(
@@ -102,4 +99,4 @@ def gif(
 
 
 if __name__ == "__main__":
-    app()
+    app()  # pragma: no cover
