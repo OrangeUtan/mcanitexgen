@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import warnings
 from pathlib import Path
 from typing import Optional, cast
 
@@ -38,11 +39,14 @@ def convert_to_gif_frames(frames: list[dict], states: list[Image], frametime: fl
 
 def create_gif(frames: list[dict], texture: Image, frametime: int, dest: Path):
     states = get_animation_states_from_texture(texture)
-    frames, durations = zip(*convert_to_gif_frames(frames, states, frametime))
 
-    mcanitexgen.images2gif.writeGif(
-        dest, images=frames, duration=durations, subRectangles=False, dispose=2
-    )
+    if frames:
+        images, durations = zip(*convert_to_gif_frames(frames, states, frametime))
+        mcanitexgen.images2gif.writeGif(
+            dest, images, durations, subRectangles=False, dispose=2
+        )
+    else:
+        warnings.warn(f"No frames to create gif '{str(dest)}'")
 
 
 def version_callback(value: bool):
