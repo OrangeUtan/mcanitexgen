@@ -7,7 +7,7 @@
 ![](https://img.shields.io/badge/pre--commit-enabled-green)
 ![](https://github.com/orangeutan/mcanitexgen/workflows/test/badge.svg)
 
-# Minecraft animated texture generator
+# Mcanitexgen
 Mcanitexgen is a generator for ".mcmeta" files that Minecraft uses to animate textures.<br>
 
 ## The full power of Python
@@ -15,12 +15,27 @@ Mcanitexgen allows you to write texture animations in Python instead of json. Us
 
 <img src="https://raw.githubusercontent.com/OrangeUtan/mcanitexgen/master/examples/dog/dog.gif" width="400" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
 
-## Install
-`pip install mcanitexgen`
+# Table of contents
+- [Installation](#Installation)
+- [Usage](#Usage)
+- [Example](#Example)
+- [More examples](https://github.com/OrangeUtan/mcanitexgen/tree/main/examples)
+- [Changelog](https://github.com/OrangeUtan/mcanitexgen/blob/main/CHANGELOG.md)
 
-## Usage
-- `mcanitexgen generate <animation_file> [out_dir]` generates .mcmeta files for all animations in an animation file
-- `mcanitexgen gif <animation_file> [out_dir]` creates gifs for all animations in an animation file
+# Installation
+```
+pip install mcanitexgen
+```
+
+# Usage
+Generate .mcmeta files for all animations in a file
+```
+mcanitexgen generate <animation_file> [out_dir]
+```
+Create gifs for all animations in animation a file
+```
+mcanitexgen gif <animation_file> [out_dir]
+```
 
 # Example
 We are going to create this animation.<br>
@@ -28,11 +43,11 @@ We are going to create this animation.<br>
 
 
 First we have to create the different states of the animation.
-I created a simple "steve.png" file:<br>
+I created a simple **steve.png** file:<br>
 <img src="https://raw.githubusercontent.com/OrangeUtan/mcanitexgen/master/examples/steve/steve.png" width="100" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
 
 Top to Bottom: Looking normal, blinking, wink with right eye, wink with left eye.<br>
-Now we can create the animation file "steve.animation.py" that uses these states to create an animation:<br>
+Now we can create the animation file **steve.animation .py** that uses these states to create an animation:<br>
 ```python
 from mcanitexgen import animation, TextureAnimation, State, Sequence
 
@@ -57,7 +72,7 @@ class Steve(TextureAnimation):
   )
 ```
 
-Now run `mcanitexgen steve.animation.py` and Mcanitexgen will create a "steve.png.mcmeta" file:
+Now run `mcanitexgen steve.animation.py` and Mcanitexgen will create a **steve.png.mcmeta** file:
 ```json
 {
   "animation": {
@@ -80,5 +95,4 @@ Now run `mcanitexgen steve.animation.py` and Mcanitexgen will create a "steve.pn
   }
 }
 ```
-
-More complex examples can be found in the [here](https://github.com/OrangeUtan/mcanitexgen/tree/master/examples)
+Put **steve.png.mcmeta** into the same directory as **steve.png**. Minecraft will then detect it and animate the texture.
