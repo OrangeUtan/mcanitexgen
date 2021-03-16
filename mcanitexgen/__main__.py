@@ -4,7 +4,7 @@ import json
 import math
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 import PIL.Image
 import typer
@@ -12,6 +12,7 @@ from PIL.Image import Image
 
 import mcanitexgen.images2gif
 from mcanitexgen import load_animations_from_file
+from mcanitexgen.generator import TextureAnimation, TextureAnimationMeta
 
 
 def get_animation_states_from_texture(texture: Image):
@@ -33,6 +34,19 @@ def convert_to_gif_frames(frames: list[dict], states: list[Image], frametime: fl
     frametime = 1 / 20 * frametime
     for frame in frames:
         yield (states[frame["index"]], frametime * frame["time"])
+
+
+def create_gif(animation: TextureAnimation, texture: Path, dest: Path):
+    states = get_animation_states_from_texture(PIL.Image.open(texture))
+    frames, durations = zip(
+        *convert_to_gif_frames(
+            cast(TextureAnimationMeta, animation).frames, states, animation.frametime
+        )
+    )
+
+    mcanitexgen.images2gif.writeGif(
+        dest, images=frames, duration=durations, subRectangles=False, dispose=2
+    )
 
 
 def version_callback(value: bool):
@@ -86,16 +100,8 @@ def gif(
 
     for animation in load_animations_from_file(file).values():
         texture_path = Path(file.parent, animation.texture)
-        gif_path = Path(out_dir, f"{os.path.splitext(animation.texture.name)[0]}.gif")
-
-        states = get_animation_states_from_texture(PIL.Image.open(texture_path))
-        frames, durations = zip(
-            *convert_to_gif_frames(animation.frames, states, animation.frametime)
-        )
-
-        mcanitexgen.images2gif.writeGif(
-            gif_path, images=frames, duration=durations, subRectangles=False, dispose=2
-        )
+        dest = Path(out_dir, f"{os.path.splitext(animation.texture.name)[0]}.gif")
+        create_gif(animation, dest, texture_path)
 
 
 if __name__ == "__main__":

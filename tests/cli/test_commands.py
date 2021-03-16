@@ -1,5 +1,3 @@
-from contextlib import contextmanager
-from io import TextIOWrapper
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -7,6 +5,7 @@ import pytest
 from typer.testing import CliRunner
 
 from mcanitexgen import __main__ as cli
+from mcanitexgen.generator import Animation
 
 
 @pytest.fixture
@@ -38,8 +37,8 @@ class Test_generate:
             }
         }
 
-    def test_animation_file_doesnt_exist(self, runner: CliRunner):
-        result = runner.invoke(cli.app, "generate doesnt_exist")
+    def test_file_doesnt_exist(self, runner: CliRunner):
+        result = runner.invoke(cli.app, "generate doesnt_exist", catch_exceptions=False)
 
         assert result.exit_code == 2
         assert "does not exist" in result.stdout
@@ -65,3 +64,48 @@ class Test_generate:
 
                     mock_dump.assert_called_once()
                     assert mock_dump.call_args_list[0][0][0] == steve_mcmeta
+
+
+class Test_gif:
+    def test_file_doesnt_exist(self, runner: CliRunner):
+        result = runner.invoke(cli.app, "gif doesnt_exist", catch_exceptions=False)
+
+        assert result.exit_code == 2
+        assert "does not exist" in result.stdout
+
+    def test_steve(self, runner: CliRunner):
+        with patch("mcanitexgen.__main__.create_gif", new=MagicMock()) as mock_create_gif:
+            runner.invoke(
+                cli.app, "gif tests/cli/res/steve.animation.py", catch_exceptions=False
+            )
+            mock_create_gif.assert_called_once()
+
+            args = mock_create_gif.call_args_list[0][0]
+            assert args[0].__qualname__ == "Steve"
+            assert args[1] == Path("tests/cli/res/steve.gif")
+            assert args[2] == Path("tests/cli/res/steve.png")
+
+    @pytest.mark.parametrize(
+        "out_dir, expected_gif_path",
+        [
+            ("", "tests/cli/res/steve.gif"),
+            (".", "steve.gif"),
+            ("build/generated", "build/generated/steve.gif"),
+        ],
+    )
+    def test_out_dir(self, out_dir, expected_gif_path, runner: CliRunner):
+        with patch("mcanitexgen.__main__.create_gif", new=MagicMock()) as mock_create_gif:
+            runner.invoke(
+                cli.app,
+                f"gif tests/cli/res/steve.animation.py {out_dir}",
+                catch_exceptions=False,
+            )
+
+            mock_create_gif.assert_called_once()
+
+            Animation
+
+            args = mock_create_gif.call_args_list[0][0]
+            assert args[0].__qualname__ == "Steve"
+            assert args[1] == Path(expected_gif_path)
+            assert args[2] == Path("tests/cli/res/steve.png")
