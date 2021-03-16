@@ -19,8 +19,8 @@ Mcanitexgen allows you to write texture animations in Python instead of json. Us
 `pip install mcanitexgen`
 
 ## Usage
-- `python -m mcanitexgen generate <animation_file> [out_dir]` generates .mcmeta files for all animations in an animation file
-- `python -m mcanitexgen gif <animation_file> [out_dir]` creates gifs for all animations in an animation file
+- `mcanitexgen generate <animation_file> [out_dir]` generates .mcmeta files for all animations in an animation file
+- `mcanitexgen gif <animation_file> [out_dir]` creates gifs for all animations in an animation file
 
 # Example
 We are going to create this animation.<br>
@@ -57,7 +57,7 @@ class Steve(TextureAnimation):
   )
 ```
 
-Now run `python -m mcanitexgen steve.animation.py` and Mcanitexgen will create a "steve.png.mcmeta" file:
+Now run `mcanitexgen steve.animation.py` and Mcanitexgen will create a "steve.png.mcmeta" file:
 ```json
 {
   "animation": {

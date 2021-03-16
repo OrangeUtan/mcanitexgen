@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 import math
 import os
+import warnings
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 import PIL.Image
 import typer
@@ -12,6 +13,7 @@ from PIL.Image import Image
 
 import mcanitexgen.images2gif
 from mcanitexgen import load_animations_from_file
+from mcanitexgen.generator import TextureAnimation, TextureAnimationMeta
 
 
 def get_animation_states_from_texture(texture: Image):
@@ -35,57 +37,73 @@ def convert_to_gif_frames(frames: list[dict], states: list[Image], frametime: fl
         yield (states[frame["index"]], frametime * frame["time"])
 
 
-app = typer.Typer()
+def create_gif(frames: list[dict], texture: Image, frametime: int, dest: Path):
+    states = get_animation_states_from_texture(texture)
+
+    if frames:
+        images, durations = zip(*convert_to_gif_frames(frames, states, frametime))
+        mcanitexgen.images2gif.writeGif(
+            dest, images, durations, subRectangles=False, dispose=2
+        )
+    else:
+        warnings.warn(f"No frames to create gif '{str(dest)}'")
+
+
+def version_callback(value: bool):
+    if value:
+        typer.echo(f"Mcanitexgen: {mcanitexgen.__version__}")
+        raise typer.Exit()
+
+
+def main(
+    version: bool = typer.Option(
+        None, "--version", "-v", callback=version_callback, is_eager=True
+    )
+):
+    pass
+
+
+app = typer.Typer(callback=main)
 
 
 @app.command(help="Generate .mcmeta files for all animations in an animation file")
 def generate(
-    animations_file: str,
-    out_dir: Optional[str] = typer.Argument(
-        None, help="Directory animation files will be generated in"
+    file: Path = typer.Argument(..., exists=True, dir_okay=False, readable=True),
+    out_dir: Optional[Path] = typer.Argument(
+        None,
+        help="Directory animation files will be generated in",
+        file_okay=False,
+        writable=True,
     ),
     no_indent: int = typer.Option(
         False, help="Pretty print json with indentation", is_flag=True, flag_value=True
     ),
 ):
-    animations_path: Path = Path(animations_file)
-    if not animations_path.exists():
-        raise FileNotFoundError(animations_path)
-    out_dir_path: Path = Path(out_dir) if out_dir else animations_path.parent
-    out_dir_path.mkdir(parents=True, exist_ok=True)
+    out_dir = out_dir if out_dir else file.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    texture_animations = load_animations_from_file(animations_path)
+    texture_animations = load_animations_from_file(file)
     for animation in texture_animations.values():
-        with Path(out_dir_path, f"{animation.texture}.mcmeta").open("w") as f:
+        with Path(out_dir, f"{animation.texture}.mcmeta").open("w") as f:
             json.dump(animation.to_mcmeta(), f, indent=None if no_indent else 2)
 
 
 @app.command(help="Create gifs for all animations in an animation file")
 def gif(
-    animations_file: str,
-    out_dir: Optional[str] = typer.Argument(
-        None, help="Directory gif files will be generated in"
+    file: Path = typer.Argument(..., exists=True, dir_okay=False, readable=True),
+    out_dir: Optional[Path] = typer.Argument(
+        None, help="Directory gif files will be generated in", file_okay=False, writable=True
     ),
 ):
-    animations_path: Path = Path(animations_file)
-    if not animations_path.exists():
-        raise FileNotFoundError(animations_path)
-    out_dir_path: Path = Path(out_dir) if out_dir else animations_path.parent
-    out_dir_path.mkdir(parents=True, exist_ok=True)
+    out_dir = out_dir if out_dir else file.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    for animation in load_animations_from_file(animations_path).values():
-        texture_path = Path(animations_path.parent, animation.texture)
-        gif_path = Path(out_dir_path, f"{os.path.splitext(animation.texture.name)[0]}.gif")
-
-        states = get_animation_states_from_texture(PIL.Image.open(texture_path))
-        frames, durations = zip(
-            *convert_to_gif_frames(animation.frames, states, animation.frametime)
-        )
-
-        mcanitexgen.images2gif.writeGif(
-            gif_path, images=frames, duration=durations, subRectangles=False, dispose=2
-        )
+    for animation in load_animations_from_file(file).values():
+        texture_path = Path(file.parent, animation.texture)
+        dest = Path(out_dir, f"{os.path.splitext(animation.texture.name)[0]}.gif")
+        texture = PIL.Image.open(texture_path)
+        create_gif(animation.frames, texture, animation.frametime, dest)
 
 
 if __name__ == "__main__":
-    app()
+    app()  # pragma: no cover
