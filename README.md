@@ -1,7 +1,7 @@
 ![](https://img.shields.io/github/license/orangeutan/mcanitexgen)
 ![](https://img.shields.io/badge/python-3.8|3.9-blue)
 [![](https://img.shields.io/pypi/v/mcanitexgen)](https://pypi.org/project/mcanitexgen/)
-![](./coverage.svg)
+![](https://raw.githubusercontent.com/OrangeUtan/mcanitexgen/6067435cfa656819bcef780415e36ff3e5f117bb/coverage.svg)
 ![](https://img.shields.io/badge/mypy-checked-green)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 ![](https://img.shields.io/badge/pre--commit-enabled-green)
