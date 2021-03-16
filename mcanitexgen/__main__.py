@@ -36,13 +36,9 @@ def convert_to_gif_frames(frames: list[dict], states: list[Image], frametime: fl
         yield (states[frame["index"]], frametime * frame["time"])
 
 
-def create_gif(animation: TextureAnimation, texture: Path, dest: Path):
-    states = get_animation_states_from_texture(PIL.Image.open(texture))
-    frames, durations = zip(
-        *convert_to_gif_frames(
-            cast(TextureAnimationMeta, animation).frames, states, animation.frametime
-        )
-    )
+def create_gif(frames: list[dict], texture: Image, frametime: int, dest: Path):
+    states = get_animation_states_from_texture(texture)
+    frames, durations = zip(*convert_to_gif_frames(frames, states, frametime))
 
     mcanitexgen.images2gif.writeGif(
         dest, images=frames, duration=durations, subRectangles=False, dispose=2
@@ -101,7 +97,8 @@ def gif(
     for animation in load_animations_from_file(file).values():
         texture_path = Path(file.parent, animation.texture)
         dest = Path(out_dir, f"{os.path.splitext(animation.texture.name)[0]}.gif")
-        create_gif(animation, dest, texture_path)
+        texture = PIL.Image.open(texture_path)
+        create_gif(animation.frames, texture, animation.frametime, dest)
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
+import mcanitexgen
 from mcanitexgen import __main__ as cli
 from mcanitexgen.generator import Animation
 
@@ -11,6 +12,12 @@ from mcanitexgen.generator import Animation
 @pytest.fixture
 def runner():
     return CliRunner()
+
+
+class Test_main:
+    def test_version(self, runner: CliRunner):
+        result = runner.invoke(cli.app, "--version", catch_exceptions=False)
+        assert mcanitexgen.__version__ in result.stdout
 
 
 class Test_generate:
@@ -74,38 +81,41 @@ class Test_gif:
         assert "does not exist" in result.stdout
 
     def test_steve(self, runner: CliRunner):
-        with patch("mcanitexgen.__main__.create_gif", new=MagicMock()) as mock_create_gif:
-            runner.invoke(
-                cli.app, "gif tests/cli/res/steve.animation.py", catch_exceptions=False
-            )
-            mock_create_gif.assert_called_once()
+        with patch("PIL.Image.open", new=MagicMock()) as mock_open:
+            with patch("mcanitexgen.__main__.create_gif", new=MagicMock()) as mock_create_gif:
+                runner.invoke(
+                    cli.app, "gif tests/cli/res/steve.animation.py", catch_exceptions=False
+                )
 
-            args = mock_create_gif.call_args_list[0][0]
-            assert args[0].__qualname__ == "Steve"
-            assert args[1] == Path("tests/cli/res/steve.gif")
-            assert args[2] == Path("tests/cli/res/steve.png")
+                mock_open.assert_called_once()
+                assert mock_open.call_args_list[0][0][0] == Path("tests/cli/res/steve.png")
+
+                mock_create_gif.assert_called_once()
+                frames, texture, frametime, dest = mock_create_gif.call_args_list[0][0]
+                assert texture == mock_open.return_value
+                assert dest == Path("tests/cli/res/steve.gif")
 
     @pytest.mark.parametrize(
-        "out_dir, expected_gif_path",
+        "out_dir, expected_dest",
         [
             ("", "tests/cli/res/steve.gif"),
             (".", "steve.gif"),
             ("build/generated", "build/generated/steve.gif"),
         ],
     )
-    def test_out_dir(self, out_dir, expected_gif_path, runner: CliRunner):
-        with patch("mcanitexgen.__main__.create_gif", new=MagicMock()) as mock_create_gif:
-            runner.invoke(
-                cli.app,
-                f"gif tests/cli/res/steve.animation.py {out_dir}",
-                catch_exceptions=False,
-            )
+    def test_out_dir(self, out_dir, expected_dest, runner: CliRunner):
+        with patch("PIL.Image.open", new=MagicMock()) as mock_open:
+            with patch("mcanitexgen.__main__.create_gif", new=MagicMock()) as mock_create_gif:
+                runner.invoke(
+                    cli.app,
+                    f"gif tests/cli/res/steve.animation.py {out_dir}",
+                    catch_exceptions=False,
+                )
 
-            mock_create_gif.assert_called_once()
+                mock_open.assert_called_once()
+                assert mock_open.call_args_list[0][0][0] == Path("tests/cli/res/steve.png")
 
-            Animation
-
-            args = mock_create_gif.call_args_list[0][0]
-            assert args[0].__qualname__ == "Steve"
-            assert args[1] == Path(expected_gif_path)
-            assert args[2] == Path("tests/cli/res/steve.png")
+                mock_create_gif.assert_called_once()
+                frames, texture, frametime, dest = mock_create_gif.call_args_list[0][0]
+                assert texture == mock_open.return_value
+                assert dest == Path(expected_dest)
