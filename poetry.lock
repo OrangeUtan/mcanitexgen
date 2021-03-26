@@ -514,6 +514,18 @@ pytest = ">=4.6"
 testing = ["fields", "hunter", "process-tests (==2.0.2)", "six", "pytest-xdist", "virtualenv"]
 
 [[package]]
+name = "pytest-insta"
+version = "0.1.7"
+description = "A practical snapshot testing plugin for pytest"
+category = "dev"
+optional = false
+python-versions = ">=3.8,<4.0"
+
+[package.dependencies]
+pytest = ">=6.0.2,<7.0.0"
+wrapt = ">=1.12.1,<2.0.0"
+
+[[package]]
 name = "python-gitlab"
 version = "2.6.0"
 description = "Interact with GitLab API"
@@ -811,6 +823,14 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "wrapt"
+version = "1.12.1"
+description = "Module for decorators, wrappers and monkey patching."
+category = "dev"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "zipp"
 version = "3.4.1"
 description = "Backport of pathlib-compatible object wrapper for zip files"
@@ -825,7 +845,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "359f508bf4cd65d4672034414dc9ee28688e65a879081431f8d4279fd153eb57"
+content-hash = "94ffbd8196e91a6b73fa541ec0b786d6381709ea149b0e07b8e393cf14ac925e"
 
 [metadata.files]
 appdirs = [
@@ -1179,6 +1199,10 @@ pytest-cov = [
     {file = "pytest-cov-2.11.1.tar.gz", hash = "sha256:359952d9d39b9f822d9d29324483e7ba04a3a17dd7d05aa6beb7ea01e359e5f7"},
     {file = "pytest_cov-2.11.1-py2.py3-none-any.whl", hash = "sha256:bdb9fdb0b85a7cc825269a4c56b48ccaa5c7e365054b6038772c32ddcdc969da"},
 ]
+pytest-insta = [
+    {file = "pytest-insta-0.1.7.tar.gz", hash = "sha256:daa265c8f31920f215b9363ce57c820ade7a87d0bd1239e91514eec63ea50ad2"},
+    {file = "pytest_insta-0.1.7-py3-none-any.whl", hash = "sha256:618ca678fb2c32b1e332903b283179d5fd08d43ea3c8445fc4fc42e30dba95f6"},
+]
 python-gitlab = [
     {file = "python-gitlab-2.6.0.tar.gz", hash = "sha256:a862c6874524ab585b725a17b2cd2950fc09d6d74205f40a11be2a4e8f2dcaa1"},
     {file = "python_gitlab-2.6.0-py3-none-any.whl", hash = "sha256:8f6a62b2804021416f13e91f359085f1071fb7adedfb292ef0d0877df777a075"},
@@ -1365,6 +1389,9 @@ virtualenv = [
 webencodings = [
     {file = "webencodings-0.5.1-py2.py3-none-any.whl", hash = "sha256:a0af1213f3c2226497a97e2b3aa01a7e4bee4f403f95be16fc9acd2947514a78"},
     {file = "webencodings-0.5.1.tar.gz", hash = "sha256:b36a1c245f2d304965eb4e0a82848379241dc04b865afcc4aab16748587e1923"},
+]
+wrapt = [
+    {file = "wrapt-1.12.1.tar.gz", hash = "sha256:b62ffa81fb85f4332a4f609cab4ac40709470da05643a082ec1eb88e6d9b97d7"},
 ]
 zipp = [
     {file = "zipp-3.4.1-py3-none-any.whl", hash = "sha256:51cb66cc54621609dd593d1787f286ee42a5c0adbb4b29abea5a63edc3e03098"},
