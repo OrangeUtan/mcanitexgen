@@ -3,8 +3,6 @@
 <!--next-version-placeholder-->
 
 ## v1.0.4 (2021-03-26)
-### Fix
-* Fix fix fix fix fix ifx please work ([`5e0550e`](https://github.com/OrangeUtan/mcanitexgen/commit/5e0550ef9423c9c0ec9baca88530eaa3e62faaba))
 
 ## [1.0.3] - 2021-03-16
 ### Added
