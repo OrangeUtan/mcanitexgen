@@ -7,7 +7,7 @@ import PIL.Image
 import pytest
 from pytest import approx, fixture
 
-from mcanitexgen import __main__ as cli
+from mcanitexgen import cli
 
 
 def frame(index: int, time: int):

@@ -5,8 +5,7 @@ import pytest
 from typer.testing import CliRunner
 
 import mcanitexgen
-from mcanitexgen import __main__ as cli
-from mcanitexgen.generator import Animation
+from mcanitexgen import cli
 
 
 @pytest.fixture
@@ -82,7 +81,7 @@ class Test_gif:
 
     def test_steve(self, runner: CliRunner):
         with patch("PIL.Image.open", new=MagicMock()) as mock_open:
-            with patch("mcanitexgen.__main__.create_gif", new=MagicMock()) as mock_create_gif:
+            with patch("mcanitexgen.cli.create_gif", new=MagicMock()) as mock_create_gif:
                 runner.invoke(
                     cli.app, "gif tests/cli/res/steve.animation.py", catch_exceptions=False
                 )
@@ -105,7 +104,7 @@ class Test_gif:
     )
     def test_out_dir(self, out_dir, expected_dest, runner: CliRunner):
         with patch("PIL.Image.open", new=MagicMock()) as mock_open:
-            with patch("mcanitexgen.__main__.create_gif", new=MagicMock()) as mock_create_gif:
+            with patch("mcanitexgen.cli.create_gif", new=MagicMock()) as mock_create_gif:
                 runner.invoke(
                     cli.app,
                     f"gif tests/cli/res/steve.animation.py {out_dir}",
