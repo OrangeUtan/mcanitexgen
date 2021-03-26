@@ -3,8 +3,9 @@
 <!--next-version-placeholder-->
 
 ## v1.0.4 (2021-03-26)
+Switched to pyton-semantic-release
 
-## [1.0.3] - 2021-03-16
+## v1.0.3 - 2021-03-16
 ### Added
 - Package can now be executed as a script (i.e. `mcanitexgen` instead of `python -m mcanitexgen`)
 - Automatic version bumping using [tbump](https://github.com/TankerHQ/tbump)
@@ -14,13 +15,13 @@
 ### Changed
 - Better argument parsing/checking for subcommands
 
-## [1.0.2] - 2021-03-14
+## v1.0.2 - 2021-03-14
 ### Added
 - Consecutive frames with the same index are combined
 ### Fixed
 - Frames in gifs only rendered the part that changed from last frame
 
-## [1.0.1] - 2021-03-14
+## v1.0.1 - 2021-03-14
 ### Added
 - Added `--no-indent` flag to `generate` subcommand
 ### Changed
@@ -28,7 +29,7 @@
 ### Fixed
 - Background in gifs properly resets with each frame
 
-## [1.0.0] - 2021-03-13
+## v1.0.0 - 2021-03-13
 ### Added
 - `generate` CLI subcommand that generates .mcmeta files from animation files
 - `gif` CLI subcommand that generates animated gifs from animation files
@@ -48,13 +49,13 @@
 - Publishing through setuptools
 - YAML animation files are no longer supported
 
-## [0.0.9] - 2020-06-10
+## v0.0.9 - 2020-06-10
 ### Added
 - Renamed project from **mcmetagen** to **mcanitexgen**
 - PyPi Package
 - Added argparse CLI that parses file and generates .mcmeta files
 
-## [0.0.2] - 2020-06-09
+## v0.0.2 - 2020-06-09
 ### Added
 - Github Actions
 - Animation files written in YAML
