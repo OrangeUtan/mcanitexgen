@@ -51,3 +51,4 @@ branch="release"
 version_toml = "pyproject.toml:tool.poetry.version"
 version_variable = ["mcanitexgen/__init__.py:__version__"]
 major_on_zero = false
+build_command = "poetry build"
