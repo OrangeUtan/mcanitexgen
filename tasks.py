@@ -8,7 +8,7 @@ SRC_DIR = Path("mcanitexgen")
 
 
 @task
-def setup(c):
+def install(c):
     os.system("poetry lock -n")
     os.system("poetry install -n")
     os.system("poetry run pre-commit install")
@@ -29,14 +29,3 @@ def test(c, verbose=False, s=False):
     if os.system(f"poetry run pytest --cov={str(SRC_DIR)} --cov-report=xml {flags}") == 0:
         os.system("poetry run coverage report")
         os.system("poetry run coverage-badge -o coverage.svg -f")
-
-
-@task
-def publish(c):
-    os.system("poetry build")
-    os.system("poetry publish")
-
-
-@task
-def bump(c, version):
-    os.system(f"poetry run tbump {version}")

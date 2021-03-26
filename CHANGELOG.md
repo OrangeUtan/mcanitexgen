@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+<!--next-version-placeholder-->
 
 ## [1.0.3] - 2021-03-16
 ### Added
