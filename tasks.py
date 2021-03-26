@@ -11,7 +11,8 @@ SRC_DIR = Path("mcanitexgen")
 def install(c):
     os.system("poetry lock -n")
     os.system("poetry install -n")
-    os.system("poetry run pre-commit install")
+    os.system("poetry run pre-commit install --hook-type pre-commit")
+    os.system("poetry run pre-commit install --hook-type pre-push")
 
 
 @task
