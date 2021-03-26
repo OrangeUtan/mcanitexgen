@@ -5,7 +5,7 @@ import math
 import os
 import warnings
 from pathlib import Path
-from typing import Optional, cast
+from typing import Optional
 
 import PIL.Image
 import typer
@@ -13,7 +13,6 @@ from PIL.Image import Image
 
 import mcanitexgen.images2gif
 from mcanitexgen import load_animations_from_file
-from mcanitexgen.generator import TextureAnimation, TextureAnimationMeta
 
 
 def get_animation_states_from_texture(texture: Image):
