@@ -36,11 +36,22 @@ def steve_mcmeta():
     }
 
 
-def test_file_doesnt_exist(runner: CliRunner):
-    result = runner.invoke(cli.app, "generate doesnt_exist", catch_exceptions=False)
+class Test_file_arg:
+    def test_no_file_arg(self, runner: CliRunner):
+        result = runner.invoke(cli.app, "generate", catch_exceptions=False)
+        assert result.exit_code != 0
+        assert "Missing argument" in result.output
 
-    assert result.exit_code == 2
-    assert "does not exist" in result.stdout
+    def test_file_doesnt_exist(self, runner: CliRunner):
+        result = runner.invoke(cli.app, "generate doesnt_exist", catch_exceptions=False)
+
+        assert result.exit_code == 2
+        assert "does not exist" in result.stdout
+
+    def test_file_is_dir(self, runner: CliRunner):
+        result = runner.invoke(cli.app, "generate tests/cli/examples", catch_exceptions=False)
+        assert result.exit_code != 0
+        assert "is a directory" in result.output
 
 
 @pytest.mark.parametrize(
