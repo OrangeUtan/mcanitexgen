@@ -1,11 +1,10 @@
-import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcanitexgen import generator
-from mcanitexgen.generator import Sequence, State, TextureAnimation, animation
+from mcanitexgen.animation import generator
+from mcanitexgen.animation.generator import Sequence, State, TextureAnimation, animation
 
 
 @pytest.fixture

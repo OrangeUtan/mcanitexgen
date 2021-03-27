@@ -1,8 +1,7 @@
 import pytest
 
-from mcanitexgen import generator
-from mcanitexgen.generator import Animation
-from mcanitexgen.parser import Action, Duration, StateAction
+from mcanitexgen.animation import generator
+from mcanitexgen.animation.parser import Action, Duration
 
 
 class InvalidCustomAction(Action):

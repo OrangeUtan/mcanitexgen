@@ -1,7 +1,6 @@
 import pytest
 
-from mcanitexgen import generator
-from mcanitexgen.generator import Animation, GeneratorError
+from mcanitexgen.animation.generator import Animation, GeneratorError
 
 
 def frame(index: int, time: int):

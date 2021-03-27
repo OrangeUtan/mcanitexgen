@@ -1,8 +1,15 @@
 import pytest
 
-from mcanitexgen import generator
-from mcanitexgen.generator import Animation
-from mcanitexgen.parser import Duration, Sequence, SequenceAction, State, StateAction, Weight
+from mcanitexgen.animation import generator
+from mcanitexgen.animation.generator import Animation
+from mcanitexgen.animation.parser import (
+    Duration,
+    Sequence,
+    SequenceAction,
+    State,
+    StateAction,
+    Weight,
+)
 
 
 def frame(index: int, time: int):

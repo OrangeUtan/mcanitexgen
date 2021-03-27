@@ -3,8 +3,7 @@ from hypothesis import given, settings
 from hypothesis.strategies import builds, integers
 from hypothesis.strategies._internal.core import lists
 
-from mcanitexgen import generator
-from mcanitexgen.generator import Animation, TextureAnimation
+from mcanitexgen.animation.generator import Animation, TextureAnimation
 
 
 def frame(index: int, time: int):

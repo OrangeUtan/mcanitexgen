@@ -1,6 +1,6 @@
 import pytest
 
-from mcanitexgen.parser import Duration, State, StateAction, Timeframe, Weight
+from mcanitexgen.animation.parser import Duration, State, StateAction, Timeframe, Weight
 
 
 class Test_call:

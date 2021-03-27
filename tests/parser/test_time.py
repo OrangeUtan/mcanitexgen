@@ -1,6 +1,6 @@
 import pytest
 
-from mcanitexgen.parser import Duration, ParserError, Time, Timeframe, Weight
+from mcanitexgen.animation.parser import Duration, ParserError, Time, Timeframe, Weight
 
 
 class Test_Timeframe_init:

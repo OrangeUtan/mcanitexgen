@@ -1,8 +1,8 @@
 import pytest
 
-from mcanitexgen import generator
-from mcanitexgen.generator import Animation, GeneratorError
-from mcanitexgen.parser import (
+from mcanitexgen.animation import generator
+from mcanitexgen.animation.generator import Animation, GeneratorError
+from mcanitexgen.animation.parser import (
     Duration,
     Sequence,
     SequenceAction,

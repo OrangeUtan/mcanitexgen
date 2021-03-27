@@ -1,6 +1,6 @@
 import pytest
 
-from mcanitexgen.parser import (
+from mcanitexgen.animation.parser import (
     Duration,
     ParserError,
     Sequence,

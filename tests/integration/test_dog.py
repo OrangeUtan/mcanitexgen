@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from mcanitexgen.generator import Mark, load_animations_from_file
+from mcanitexgen.animation.generator import Mark, load_animations_from_file
 
 
 def frame(index: int, time: int):

@@ -1,5 +1,5 @@
-from mcanitexgen import Sequence, State, animation
-from mcanitexgen.generator import Animation, TextureAnimation
+from mcanitexgen.animation import Sequence, State, animation
+from mcanitexgen.animation.generator import Animation, TextureAnimation
 
 
 def frame(index: int, time: int):

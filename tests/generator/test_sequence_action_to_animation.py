@@ -1,8 +1,15 @@
 import pytest
 
-from mcanitexgen import generator
-from mcanitexgen.generator import GeneratorError
-from mcanitexgen.parser import Duration, Sequence, SequenceAction, State, StateAction, Weight
+from mcanitexgen.animation import generator
+from mcanitexgen.animation.generator import GeneratorError
+from mcanitexgen.animation.parser import (
+    Duration,
+    Sequence,
+    SequenceAction,
+    State,
+    StateAction,
+    Weight,
+)
 
 
 class Test_Unweighted:

@@ -11,7 +11,7 @@ import typer
 from PIL.Image import Image
 
 import mcanitexgen.images2gif
-from mcanitexgen import generator
+from mcanitexgen.animation import load_animations_from_file, write_mcmeta_files
 
 
 def get_animation_states_from_texture(texture: Image):
@@ -82,13 +82,11 @@ def generate(
 ):
     out_dir = out_dir if out_dir else file.parent
 
-    texture_animations = generator.load_animations_from_file(file)
+    texture_animations = load_animations_from_file(file)
 
     if not dry:
         out_dir.mkdir(parents=True, exist_ok=True)
-        generator.write_mcmeta_files(
-            texture_animations, out_dir, indent=None if no_indent else 2
-        )
+        write_mcmeta_files(texture_animations, out_dir, indent=None if no_indent else 2)
 
 
 @app.command(help="Create gifs for all animations in an animation file")
@@ -101,7 +99,7 @@ def gif(
     out_dir = out_dir if out_dir else file.parent
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    for animation in generator.load_animations_from_file(file).values():
+    for animation in load_animations_from_file(file).values():
         texture_path = Path(file.parent, animation.texture)
         dest = Path(out_dir, f"{os.path.splitext(animation.texture.name)[0]}.gif")
         texture = PIL.Image.open(texture_path)

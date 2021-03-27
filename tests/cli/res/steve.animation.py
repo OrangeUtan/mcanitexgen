@@ -1,4 +1,4 @@
-from mcanitexgen import Sequence, State, TextureAnimation, animation
+from mcanitexgen.animation import Sequence, State, TextureAnimation, animation
 
 
 @animation("steve.png")

@@ -63,14 +63,14 @@ class Test_out_arg:
         ],
     )
     def test(self, out, expected_out, runner: CliRunner):
-        with patch("mcanitexgen.generator.write_mcmeta_files", new=MagicMock()) as mock_write:
+        with patch("mcanitexgen.cli.write_mcmeta_files", new=MagicMock()) as mock_write:
             runner.invoke(cli.app, f"generate tests/cli/res/steve.animation.py {out}")
 
             mock_write.assert_called_once()
             assert mock_write.call_args_list[0][0][1] == Path(expected_out)
 
     def test_defaults_to_parent_of_file(self, runner: CliRunner):
-        with patch("mcanitexgen.generator.write_mcmeta_files", new=MagicMock()) as mock_write:
+        with patch("mcanitexgen.cli.write_mcmeta_files", new=MagicMock()) as mock_write:
             runner.invoke(cli.app, f"generate tests/cli/res/steve.animation.py")
 
             mock_write.assert_called_once()
