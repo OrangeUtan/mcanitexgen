@@ -16,7 +16,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Iterator, Optional, Type, Union
 
-from mcanitexgen import utils
+from mcanitexgen.animation import utils
 
 from .parser import (
     Action,

@@ -1,10 +1,6 @@
-import math
-
 import pytest
-from hypothesis import given, settings
-from hypothesis.strategies import floats
 
-from mcanitexgen import utils
+from mcanitexgen.animation import utils
 
 
 class Test_round_half_away_from_zero:
