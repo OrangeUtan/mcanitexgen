@@ -40,17 +40,13 @@ def generate(
     no_indent: int = typer.Option(
         False, help="Pretty print json with indentation", is_flag=True, flag_value=True
     ),
-    dry: bool = typer.Option(
-        False, "--dry", help="Dry run. Don't generate any files", is_flag=True
-    ),
 ):
     out_dir = out_dir if out_dir else file.parent
 
     texture_animations = load_animations_from_file(file)
 
-    if not dry:
-        out_dir.mkdir(parents=True, exist_ok=True)
-        write_mcmeta_files(texture_animations, out_dir, indent=None if no_indent else 2)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    write_mcmeta_files(texture_animations, out_dir, indent=None if no_indent else 2)
 
 
 @app.command(help="Create gifs for all animations in an animation file")
