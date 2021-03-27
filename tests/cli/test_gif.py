@@ -23,22 +23,26 @@ def test_steve(runner: CliRunner):
     with patch("PIL.Image.open", new=MagicMock()) as mock_open:
         with patch("mcanitexgen.gif.create_gif", new=MagicMock()) as mock_create_gif:
             runner.invoke(
-                cli.app, "gif tests/cli/res/steve.animation.py", catch_exceptions=False
+                cli.app,
+                "gif tests/animation/examples/steve.animation.py",
+                catch_exceptions=False,
             )
 
             mock_open.assert_called_once()
-            assert mock_open.call_args_list[0][0][0] == Path("tests/cli/res/steve.png")
+            assert mock_open.call_args_list[0][0][0] == Path(
+                "tests/animation/examples/steve.png"
+            )
 
             mock_create_gif.assert_called_once()
             frames, texture, frametime, dest = mock_create_gif.call_args_list[0][0]
             assert texture == mock_open.return_value
-            assert dest == Path("tests/cli/res/steve.gif")
+            assert dest == Path("tests/animation/examples/steve.gif")
 
 
 @pytest.mark.parametrize(
     "out_dir, expected_dest",
     [
-        ("", "tests/cli/res/steve.gif"),
+        ("", "tests/animation/examples/steve.gif"),
         (".", "steve.gif"),
         ("build/generated", "build/generated/steve.gif"),
     ],
@@ -48,12 +52,14 @@ def test_out_dir(out_dir, expected_dest, runner: CliRunner):
         with patch("mcanitexgen.gif.create_gif", new=MagicMock()) as mock_create_gif:
             runner.invoke(
                 cli.app,
-                f"gif tests/cli/res/steve.animation.py {out_dir}",
+                f"gif tests/animation/examples/steve.animation.py {out_dir}",
                 catch_exceptions=False,
             )
 
             mock_open.assert_called_once()
-            assert mock_open.call_args_list[0][0][0] == Path("tests/cli/res/steve.png")
+            assert mock_open.call_args_list[0][0][0] == Path(
+                "tests/animation/examples/steve.png"
+            )
 
             mock_create_gif.assert_called_once()
             frames, texture, frametime, dest = mock_create_gif.call_args_list[0][0]
