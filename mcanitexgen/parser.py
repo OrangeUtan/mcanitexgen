@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+__all__ = ["ParserError", "State", "Sequence"]
+
 import abc
 from dataclasses import dataclass
 from typing import Optional, Union

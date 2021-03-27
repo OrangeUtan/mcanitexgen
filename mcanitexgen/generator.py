@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+__all__ = [
+    "GeneratorError",
+    "animation",
+    "TextureAnimation",
+    "load_animations_from_file",
+    "write_mcmeta_files",
+]
+
 import importlib
 import importlib.util
 import json
