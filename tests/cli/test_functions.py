@@ -7,7 +7,7 @@ import PIL.Image
 import pytest
 from pytest import approx, fixture
 
-from mcanitexgen import cli
+import mcanitexgen
 
 
 def frame(index: int, time: int):
@@ -20,7 +20,7 @@ class Test_get_animation_states_from_texture:
     )
     def test_number_of_states(self, width, height, expected_num_states):
         img = PIL.Image.new("RGBA", (width, height), color="red")
-        states = cli.get_animation_states_from_texture(img)
+        states = mcanitexgen.gif.generator.get_animation_states_from_texture(img)
 
         assert len(states) == expected_num_states
 
@@ -29,7 +29,7 @@ class Test_get_animation_states_from_texture:
     )
     def test_state_sizes(self, texture_size, expected_size):
         img = PIL.Image.new("RGBA", texture_size, color="red")
-        states = cli.get_animation_states_from_texture(img)
+        states = mcanitexgen.gif.generator.get_animation_states_from_texture(img)
 
         for state in states:
             assert state.size == expected_size
@@ -39,7 +39,7 @@ class Test_get_animation_states_from_texture:
         img = PIL.Image.new("RGBA", (width, 2 * width), color="red")
 
         with pytest.raises(ValueError, match=f"Texture width '{width}' is not power of 2"):
-            cli.get_animation_states_from_texture(img)
+            mcanitexgen.gif.generator.get_animation_states_from_texture(img)
 
     @pytest.mark.parametrize("width, height", [(16, 31), (16, 127)])
     def test_height_is_not_multiple_of_width(self, width, height):
@@ -49,7 +49,7 @@ class Test_get_animation_states_from_texture:
             ValueError,
             match=f"Texture height '{height}' is not multiple of its width '{width}'",
         ):
-            cli.get_animation_states_from_texture(img)
+            mcanitexgen.gif.generator.get_animation_states_from_texture(img)
 
     @pytest.mark.parametrize(
         "texture_size, expected_cropped_boxes",
@@ -68,7 +68,7 @@ class Test_get_animation_states_from_texture:
             cropped_boxes.append(tuple(box))
 
         with patch.object(img, "crop", new=crop):
-            cli.get_animation_states_from_texture(img)
+            mcanitexgen.gif.generator.get_animation_states_from_texture(img)
 
         assert cropped_boxes == expected_cropped_boxes
 
@@ -87,7 +87,9 @@ class Test_convert_to_gif_frames:
         ],
     )
     def test(self, frames, expected_frames, expected_durations, states):
-        frames, durations = zip(*cli.convert_to_gif_frames(frames, states, 1))
+        frames, durations = zip(
+            *mcanitexgen.gif.generator.convert_to_gif_frames(frames, states, 1)
+        )
 
         assert list(frames) == expected_frames
         assert list(durations) == expected_durations
@@ -100,7 +102,9 @@ class Test_convert_to_gif_frames:
         ],
     )
     def test_frametime(self, frames, frametime, expected_frames, expected_durations, states):
-        frames, durations = zip(*cli.convert_to_gif_frames(frames, states, frametime))
+        frames, durations = zip(
+            *mcanitexgen.gif.generator.convert_to_gif_frames(frames, states, frametime)
+        )
 
         assert list(frames) == expected_frames
         assert list(durations) == expected_durations
@@ -113,7 +117,7 @@ class Test_create_gif:
 
     def test_pass_no_frames(self, texture):
         with pytest.warns(UserWarning, match="No frames.*"):
-            cli.create_gif([], texture, 1, Path("test.gif"))
+            mcanitexgen.gif.create_gif([], texture, 1, Path("test.gif"))
 
     def test(self):
         frames = [frame(0, 10), frame(1, 12)]
@@ -121,8 +125,8 @@ class Test_create_gif:
         expected_frametime = 1
         expected_dest = Path("test.gif")
 
-        with patch("mcanitexgen.images2gif.writeGif", new=MagicMock()) as mock_writeGif:
-            cli.create_gif(frames, texture, expected_frametime, expected_dest)
+        with patch("mcanitexgen.gif.images2gif.writeGif", new=MagicMock()) as mock_writeGif:
+            mcanitexgen.gif.create_gif(frames, texture, expected_frametime, expected_dest)
 
             mock_writeGif.assert_called_once()
             dest, images, durations = mock_writeGif.call_args_list[0][0]

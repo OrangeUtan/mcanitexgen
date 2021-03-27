@@ -1,4 +1,4 @@
 __version__ = "1.0.4"
-from . import animation
+from . import animation, gif
 
-__all__ = ["animation"]
+__all__ = ["animation", "gif"]

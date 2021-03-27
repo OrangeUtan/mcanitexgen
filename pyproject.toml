@@ -45,7 +45,7 @@ line_length = 95
 
 [tool.coverage.run]
 source = ["mcanitexgen"]
-omit = ["mcanitexgen/images2gif.py"]
+omit = ["mcanitexgen/__main__.py", "mcanitexgen/gif/images2gif.py"]
 
 [tool.semantic_release]
 branch="release"

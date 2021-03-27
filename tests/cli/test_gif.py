@@ -21,7 +21,7 @@ def test_file_doesnt_exist(runner: CliRunner):
 
 def test_steve(runner: CliRunner):
     with patch("PIL.Image.open", new=MagicMock()) as mock_open:
-        with patch("mcanitexgen.cli.create_gif", new=MagicMock()) as mock_create_gif:
+        with patch("mcanitexgen.gif.create_gif", new=MagicMock()) as mock_create_gif:
             runner.invoke(
                 cli.app, "gif tests/cli/res/steve.animation.py", catch_exceptions=False
             )
@@ -45,7 +45,7 @@ def test_steve(runner: CliRunner):
 )
 def test_out_dir(out_dir, expected_dest, runner: CliRunner):
     with patch("PIL.Image.open", new=MagicMock()) as mock_open:
-        with patch("mcanitexgen.cli.create_gif", new=MagicMock()) as mock_create_gif:
+        with patch("mcanitexgen.gif.create_gif", new=MagicMock()) as mock_create_gif:
             runner.invoke(
                 cli.app,
                 f"gif tests/cli/res/steve.animation.py {out_dir}",
