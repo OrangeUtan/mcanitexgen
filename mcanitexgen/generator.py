@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -23,6 +24,16 @@ from .parser import (
 
 class GeneratorError(Exception):
     pass
+
+
+def write_mcmeta_files(
+    texture_animations: dict[str, Type[TextureAnimation]],
+    out: Path,
+    indent: Optional[str] = None,
+):
+    for animation in texture_animations.values():
+        with open(Path(out, f"{animation.texture}.mcmeta"), "w", encoding="utf8") as f:
+            json.dump(animation.to_mcmeta(), f, indent=indent)
 
 
 def load_animations_from_file(path: Path):

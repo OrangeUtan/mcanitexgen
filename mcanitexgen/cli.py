@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import math
 import os
 import warnings
@@ -12,7 +11,7 @@ import typer
 from PIL.Image import Image
 
 import mcanitexgen.images2gif
-from mcanitexgen import load_animations_from_file
+from mcanitexgen import generator
 
 
 def get_animation_states_from_texture(texture: Image):
@@ -77,14 +76,19 @@ def generate(
     no_indent: int = typer.Option(
         False, help="Pretty print json with indentation", is_flag=True, flag_value=True
     ),
+    dry: bool = typer.Option(
+        False, "--dry", help="Dry run. Don't generate any files", is_flag=True
+    ),
 ):
     out_dir = out_dir if out_dir else file.parent
-    out_dir.mkdir(parents=True, exist_ok=True)
 
-    texture_animations = load_animations_from_file(file)
-    for animation in texture_animations.values():
-        with Path(out_dir, f"{animation.texture}.mcmeta").open("w") as f:
-            json.dump(animation.to_mcmeta(), f, indent=None if no_indent else 2)
+    texture_animations = generator.load_animations_from_file(file)
+
+    if not dry:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        generator.write_mcmeta_files(
+            texture_animations, out_dir, indent=None if no_indent else 2
+        )
 
 
 @app.command(help="Create gifs for all animations in an animation file")
@@ -97,7 +101,7 @@ def gif(
     out_dir = out_dir if out_dir else file.parent
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    for animation in load_animations_from_file(file).values():
+    for animation in generator.load_animations_from_file(file).values():
         texture_path = Path(file.parent, animation.texture)
         dest = Path(out_dir, f"{os.path.splitext(animation.texture.name)[0]}.gif")
         texture = PIL.Image.open(texture_path)

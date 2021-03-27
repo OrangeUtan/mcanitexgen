@@ -54,22 +54,24 @@ class Test_file_arg:
         assert "is a directory" in result.output
 
 
-@pytest.mark.parametrize(
-    "out_dir, expected_mcmeta_path",
-    [
-        ("", "tests/cli/res/steve.png.mcmeta"),
-        (".", "steve.png.mcmeta"),
-        ("build/generated", "build/generated/steve.png.mcmeta"),
-    ],
-)
-def test_out_dir(out_dir, expected_mcmeta_path, steve_mcmeta, runner: CliRunner):
-    with patch("pathlib.Path.mkdir", new=MagicMock()):
-        with patch("io.open", new=MagicMock()) as mock_open:
-            with patch("json.dump", new=MagicMock()) as mock_dump:
-                runner.invoke(cli.app, f"generate tests/cli/res/steve.animation.py {out_dir}")
+class Test_out_arg:
+    @pytest.mark.parametrize(
+        "out, expected_out",
+        [
+            (".", "."),
+            ("build/generated", "build/generated"),
+        ],
+    )
+    def test(self, out, expected_out, runner: CliRunner):
+        with patch("mcanitexgen.generator.write_mcmeta_files", new=MagicMock()) as mock_write:
+            runner.invoke(cli.app, f"generate tests/cli/res/steve.animation.py {out}")
 
-                mock_open.assert_called_once()
-                assert mock_open.call_args_list[0][0][0] == Path(expected_mcmeta_path)
+            mock_write.assert_called_once()
+            assert mock_write.call_args_list[0][0][1] == Path(expected_out)
 
-                mock_dump.assert_called_once()
-                assert mock_dump.call_args_list[0][0][0] == steve_mcmeta
+    def test_defaults_to_parent_of_file(self, runner: CliRunner):
+        with patch("mcanitexgen.generator.write_mcmeta_files", new=MagicMock()) as mock_write:
+            runner.invoke(cli.app, f"generate tests/cli/res/steve.animation.py")
+
+            mock_write.assert_called_once()
+            assert mock_write.call_args_list[0][0][1] == Path("tests/cli/res")
