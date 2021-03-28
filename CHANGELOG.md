@@ -8,7 +8,6 @@
 * Change out argument to --out option ([`6ed63ec`](https://github.com/OrangeUtan/mcanitexgen/commit/6ed63ec786422babf17b3d5f271019324eed3735))
 * Add --dry flag ([`2c5310f`](https://github.com/OrangeUtan/mcanitexgen/commit/2c5310fcc4f7ce4c98dcad20259c600b3967eb66))
 
-
 ## v1.0.5 (2021-03-28)
 ### Fix
 * Added __future__.annotations ([`59c384a`](https://github.com/OrangeUtan/mcanitexgen/commit/59c384a5ededc348c92975a0e9ae389ba97596b7))
