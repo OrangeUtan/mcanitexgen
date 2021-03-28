@@ -1,0 +1,14 @@
+{
+    "resource_pack": {
+        "load": ["resourcepack"]
+    },
+    "pipeline": [
+        "mcanitexgen.integration.beet"
+    ],
+    "meta": {
+        "mcanitexgen": {
+            "load": ["resourcepack/assets/minecraft/textures/**/*.animation.py"],
+            "prefix_identifiers": true
+        }
+    }
+}
