@@ -17,17 +17,17 @@ class Test_init:
         "actions, expected_total_weight, expected_is_weighted",
         [
             # No weighted
-            ([StateAction(None, Duration(1))], 0, False),
-            ([StateAction(None, Timeframe(0, 1, 1))], 0, False),
-            ([SequenceAction(None, Duration(1))], 0, False),
+            ([StateAction(State(0), Duration(1))], 0, False),
+            ([StateAction(State(0), Timeframe(0, 1, 1))], 0, False),
+            ([SequenceAction(Sequence(), Duration(1))], 0, False),
             # Only weighted
-            ([StateAction(None, Weight(1))], 1, True),
-            ([StateAction(None, Weight(10))], 10, True),
+            ([StateAction(State(0), Weight(1))], 1, True),
+            ([StateAction(State(0), Weight(10))], 10, True),
             (
                 [
-                    StateAction(None, Weight(4)),
-                    SequenceAction(None, Weight(1)),
-                    StateAction(None, Weight(3)),
+                    StateAction(State(0), Weight(4)),
+                    SequenceAction(Sequence(), Weight(1)),
+                    StateAction(State(0), Weight(3)),
                 ],
                 8,
                 True,
@@ -35,18 +35,18 @@ class Test_init:
             # Mixed
             (
                 [
-                    StateAction(None, Weight(5)),
-                    StateAction(None, Duration(1)),
-                    StateAction(None, Weight(2)),
+                    StateAction(State(0), Weight(5)),
+                    StateAction(State(0), Duration(1)),
+                    StateAction(State(0), Weight(2)),
                 ],
                 7,
                 True,
             ),
             (
                 [
-                    StateAction(None, Duration(1)),
-                    SequenceAction(None, Duration(1)),
-                    StateAction(None, Weight(4)),
+                    StateAction(State(0), Duration(1)),
+                    SequenceAction(Sequence(), Duration(1)),
+                    StateAction(State(0), Weight(4)),
                 ],
                 4,
                 True,
@@ -62,12 +62,12 @@ class Test_init:
     @pytest.mark.parametrize(
         "actions",
         [
-            [Sequence(StateAction(None, Duration(1)))],
+            [Sequence(StateAction(State(0), Duration(1)))],
             [
-                Sequence(StateAction(None, Duration(1))),
-                StateAction(None, Weight(1)),
-                Sequence(StateAction(None, Duration(1))),
-                StateAction(None, Duration(1)),
+                Sequence(StateAction(State(0), Duration(1))),
+                StateAction(State(0), Weight(1)),
+                Sequence(StateAction(State(0), Duration(1))),
+                StateAction(State(0), Duration(1)),
             ],
         ],
     )
@@ -87,17 +87,17 @@ class Test_init:
         "actions, expected_constant_duration",
         [
             # Weight
-            ([StateAction(None, Weight(1))], 0),
-            ([SequenceAction(None, Weight(1))], 0),
+            ([StateAction(State(0), Weight(1))], 0),
+            ([SequenceAction(Sequence(), Weight(1))], 0),
             # States with constant duration
-            ([StateAction(None, Duration(22))], 22),
-            ([StateAction(None, Duration(22)), StateAction(None, Duration(12))], 34),
-            ([StateAction(None, Weight(1)), StateAction(None, Duration(12))], 12),
+            ([StateAction(State(0), Duration(22))], 22),
+            ([StateAction(State(0), Duration(22)), StateAction(State(0), Duration(12))], 34),
+            ([StateAction(State(0), Weight(1)), StateAction(State(0), Duration(12))], 12),
             # Weighted sequence
-            ([SequenceAction(Sequence(StateAction(None, Weight(1))), None)], 0),
-            ([SequenceAction(Sequence(StateAction(None, Weight(1))), Duration(10))], 10),
+            ([SequenceAction(Sequence(StateAction(State(0), Weight(1))), None)], 0),
+            ([SequenceAction(Sequence(StateAction(State(0), Weight(1))), Duration(10))], 10),
             # Sequence with constant duration
-            ([SequenceAction(Sequence(StateAction(None, Duration(11))), None)], 11),
+            ([SequenceAction(Sequence(StateAction(State(0), Duration(11))), None)], 11),
         ],
     )
     def test_constant_duration(self, actions, expected_constant_duration):

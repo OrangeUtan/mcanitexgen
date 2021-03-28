@@ -38,7 +38,7 @@ class Sequence:
     actions: list[Action]
     name: Optional[str] = None
 
-    def __init__(self, *actions: Union[Action, Sequence]):
+    def __init__(self, *actions: Union[Action, State, Sequence]):
         self.actions = list(
             map(
                 lambda a: a() if (isinstance(a, Sequence) or isinstance(a, State)) else a,
