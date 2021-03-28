@@ -31,9 +31,11 @@ app = typer.Typer(callback=main)
 @app.command(help="Generate .mcmeta files for all animations in an animation file")
 def generate(
     file: Path = typer.Argument(..., exists=True, dir_okay=False, readable=True),
-    out_dir: Optional[Path] = typer.Argument(
+    out: Optional[Path] = typer.Option(
         None,
-        help="Directory animation files will be generated in",
+        "-o",
+        "--out",
+        help="The output directory of the generated files",
         file_okay=False,
         writable=True,
     ),
@@ -44,26 +46,31 @@ def generate(
         False, "--dry", help="Dry run. Don't generate any files", is_flag=True
     ),
 ):
-    out_dir = out_dir if out_dir else file.parent
+    out = out if out else file.parent
     texture_animations = load_animations_from_file(file)
 
     if not dry:
-        out_dir.mkdir(parents=True, exist_ok=True)
-        write_mcmeta_files(texture_animations, out_dir, indent=None if no_indent else 2)
+        out.mkdir(parents=True, exist_ok=True)
+        write_mcmeta_files(texture_animations, out, indent=None if no_indent else 2)
 
 
 @app.command(help="Create gifs for all animations in an animation file")
 def gif(
     file: Path = typer.Argument(..., exists=True, dir_okay=False, readable=True),
-    out_dir: Optional[Path] = typer.Argument(
-        None, help="Directory gif files will be generated in", file_okay=False, writable=True
+    out: Optional[Path] = typer.Option(
+        None,
+        "-o",
+        "--out",
+        help="The output directory of the generated gif",
+        file_okay=False,
+        writable=True,
     ),
 ):
-    out_dir = out_dir if out_dir else file.parent
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out if out else file.parent
+    out.mkdir(parents=True, exist_ok=True)
 
     for animation in load_animations_from_file(file).values():
         texture_path = Path(file.parent, animation.texture)
-        dest = Path(out_dir, f"{os.path.splitext(animation.texture.name)[0]}.gif")
+        dest = Path(out, f"{os.path.splitext(animation.texture.name)[0]}.gif")
         texture = PIL.Image.open(texture_path)
         mcanitexgen.gif.create_gif(animation.frames, texture, animation.frametime, dest)

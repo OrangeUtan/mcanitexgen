@@ -44,7 +44,7 @@ class Test_out_arg:
     def test(self, out, expected_out, runner: CliRunner):
         with patch("mcanitexgen.cli.write_mcmeta_files", new=MagicMock()) as mock_write:
             runner.invoke(
-                cli.app, f"generate tests/animation/examples/steve.animation.py {out}"
+                cli.app, f"generate tests/animation/examples/steve.animation.py -o {out}"
             )
 
             mock_write.assert_called_once()
