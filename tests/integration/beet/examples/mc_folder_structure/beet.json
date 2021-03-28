@@ -7,7 +7,7 @@
     ],
     "meta": {
         "mcanitexgen": {
-            "load": ["resourcepack/assets/minecraft/textures/**/*.animation.py"],
+            "load": ["resourcepack/assets/minecraft/textures/"],
             "prefix_identifiers": true
         }
     }

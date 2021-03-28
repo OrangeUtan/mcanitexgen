@@ -22,8 +22,7 @@ def create_mcanitexgen_plugin(load: Iterable[str] = ()):
 
         for pattern in load:
             for path in ctx.directory.glob(pattern):
-                print(path)
-                animations = mcanitexgen.animation.load_animations_from_file(path)
+                animations = mcanitexgen.animation.load_animations(path)
 
                 minecraft.textures_mcmeta.merge(
                     {

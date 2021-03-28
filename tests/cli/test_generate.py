@@ -13,24 +13,17 @@ def runner():
     return CliRunner()
 
 
-class Test_file_arg:
-    def test_no_file_arg(self, runner: CliRunner):
+class Test_src_arg:
+    def test_no_src_arg(self, runner: CliRunner):
         result = runner.invoke(cli.app, "generate", catch_exceptions=False)
         assert result.exit_code != 0
         assert "Missing argument" in result.output
 
-    def test_file_doesnt_exist(self, runner: CliRunner):
+    def test_src_doesnt_exist(self, runner: CliRunner):
         result = runner.invoke(cli.app, "generate doesnt_exist", catch_exceptions=False)
 
         assert result.exit_code == 2
         assert "does not exist" in result.stdout
-
-    def test_file_is_dir(self, runner: CliRunner):
-        result = runner.invoke(
-            cli.app, "generate tests/animation/examples", catch_exceptions=False
-        )
-        assert result.exit_code != 0
-        assert "is a directory" in result.output
 
 
 class Test_out_option:

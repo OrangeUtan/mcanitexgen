@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import os
+
 __all__ = [
     "GeneratorError",
     "animation",
     "TextureAnimation",
+    "load_animations",
     "load_animations_from_file",
     "write_mcmeta_files",
 ]
@@ -42,6 +45,22 @@ def write_mcmeta_files(
     for animation in texture_animations.values():
         with open(Path(out, f"{animation.texture}.mcmeta"), "w", encoding="utf8") as f:
             json.dump(animation.to_mcmeta(), f, indent=indent)
+
+
+def load_animations(src: Union[str, os.PathLike]):
+    src = Path(src)
+
+    if src.is_dir():
+        files = list(utils.files_in_dir(src))
+    else:
+        files = [src]
+        src = src.parent
+
+    animations: dict[str, Type[TextureAnimation]] = {}
+    for f in filter(lambda f: str(f).endswith(".animation.py"), files):
+        animations.update(load_animations_from_file(f))
+
+    return animations
 
 
 def load_animations_from_file(path: Path):

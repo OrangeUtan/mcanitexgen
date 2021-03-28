@@ -8,7 +8,11 @@ import PIL.Image
 import typer
 
 import mcanitexgen
-from mcanitexgen.animation import load_animations_from_file, write_mcmeta_files
+from mcanitexgen.animation import (
+    load_animations,
+    load_animations_from_file,
+    write_mcmeta_files,
+)
 
 
 def version_callback(value: bool):
@@ -30,7 +34,9 @@ app = typer.Typer(callback=main)
 
 @app.command(help="Generate .mcmeta files for all animations in an animation file")
 def generate(
-    file: Path = typer.Argument(..., exists=True, dir_okay=False, readable=True),
+    src: Path = typer.Argument(
+        ..., exists=True, readable=True, help="File or directory containing animations"
+    ),
     out: Optional[Path] = typer.Option(
         None,
         "-o",
@@ -49,9 +55,10 @@ def generate(
         False, "--dry", help="Dry run. Don't generate any files", is_flag=True
     ),
 ):
-    out = out if out else file.parent
-    texture_animations = load_animations_from_file(file)
+    if out is None:
+        out = src if src.is_dir() else src.parent
 
+    texture_animations = load_animations(src)
     if not dry:
         out.mkdir(parents=True, exist_ok=True)
         write_mcmeta_files(texture_animations, out, indent if not minify else None)

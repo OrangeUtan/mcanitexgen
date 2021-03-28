@@ -1,4 +1,6 @@
 import math
+import os
+from pathlib import Path
 from typing import Generator, Iterable
 
 
@@ -53,3 +55,9 @@ class DurationDistributor:
 
     def is_empty(self):
         return self.remaining <= 0
+
+
+def files_in_dir(dir: Path):
+    for dirname, _, filenames in os.walk(dir):
+        for filename in filenames:
+            yield Path(dirname, filename)

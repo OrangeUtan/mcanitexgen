@@ -31,3 +31,4 @@ bin
 pyvenv.cfg
 .coverage
 coverage.xml
+.pytest_cache
