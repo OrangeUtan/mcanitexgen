@@ -7,19 +7,18 @@
 ![](https://img.shields.io/badge/pre--commit-enabled-green)
 ![](https://github.com/orangeutan/mcanitexgen/workflows/test/badge.svg)
 
-# Mcanitexgen
-Mcanitexgen is a generator for ".mcmeta" files that Minecraft uses to animate textures.<br>
+# Animated-texture generator for Minecraft
+Anitexgen is a generator for ".mcmeta" files that Minecraft uses to animate textures.<br>
 
-## The full power of Python
-Mcanitexgen allows you to write texture animations in Python instead of json. Using a programming language allows you to create much more complex animations, like this dog that has 3 textures that are synchronised with each other.
+It allows you to write texture animations in Python instead of json. Using a proper programming language enables you to create much more complex animations, like this model that uses 3 animated textures to create a moving dog.
 
 <img src="https://raw.githubusercontent.com/OrangeUtan/mcanitexgen/master/examples/dog/dog.gif" width="400" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
 
-# Table of contents
 - [Installation](#Installation)
 - [Usage](#Usage)
-- [Example](#Example)
-- [More examples](https://github.com/OrangeUtan/mcanitexgen/tree/main/examples)
+- [Getting started](#Getting-started)
+  - [Create a simple animation](#Create-a-simple-animation)
+  - [More examples](https://github.com/OrangeUtan/mcanitexgen/tree/main/examples)
 - [Changelog](https://github.com/OrangeUtan/mcanitexgen/blob/main/CHANGELOG.md)
 
 # Installation
@@ -28,17 +27,23 @@ pip install mcanitexgen
 ```
 
 # Usage
-Generate .mcmeta files for all animations in a file
+Generate .mcmeta files for all animations in an animation file
+```shell
+$ mcanitexgen generate <animation_file>
+    -o, --out       The output directory of the generated files
+    -m, --minify    Minify generated files
+    -i, --indent    Indentation used when generating files
+    --dry           Dry run. Don't generate any files
 ```
-mcanitexgen generate <animation_file> [out_dir]
-```
-Create gifs for all animations in animation a file
-```
-mcanitexgen gif <animation_file> [out_dir]
+Create gifs for all animations in an animation file
+```shell
+$ mcanitexgen gif <animation_file>
+    -o, --out       The output directory of the generated files
 ```
 
-# Example
-We are going to create this animation.<br>
+# Getting started
+## Create a simple animation
+We are going to create this blinking Steve:<br>
 <img src="https://raw.githubusercontent.com/OrangeUtan/mcanitexgen/master/examples/steve/steve.gif" width="100" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"/>
 
 
@@ -49,7 +54,7 @@ I created a simple **steve.png** file:<br>
 Top to Bottom: Looking normal, blinking, wink with right eye, wink with left eye.<br>
 Now we can create the animation file **steve.animation .py** that uses these states to create an animation:<br>
 ```python
-from mcanitexgen import animation, TextureAnimation, State, Sequence
+from mcanitexgen.animation import animation, TextureAnimation, State, Sequence
 
 @animation("steve.png")
 class Steve(TextureAnimation):
@@ -71,9 +76,22 @@ class Steve(TextureAnimation):
     WINK_RIGHT(duration=30),
   )
 ```
+An overview over all out files:
+```
+resourcepack
+  ⠇
+  textures
+    └╴ item
+       ├╴steve.png
+       └╴steve.animation.py
+```
 
-Now run `mcanitexgen steve.animation.py` and Mcanitexgen will create a **steve.png.mcmeta** file:
+Passing the animation file to Anitexgen will create a **steve.png.mcmeta** file:
+```shell
+$ mcanitexgen generate steve.animation.py
+```
 ```json
+steve.png.mcmeta
 {
   "animation": {
       "interpolate": false,
@@ -95,4 +113,12 @@ Now run `mcanitexgen steve.animation.py` and Mcanitexgen will create a **steve.p
   }
 }
 ```
-Put **steve.png.mcmeta** into the same directory as **steve.png**. Minecraft will then detect it and animate the texture.
+```
+resourcepack
+  ⠇
+  textures
+    └╴ item
+       ├╴ steve.png
+       ├╴ steve.animation.py
+       └╴ steve.png.mcmeta
+```
