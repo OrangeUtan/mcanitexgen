@@ -56,3 +56,14 @@ class Test_out_arg:
 
             mock_write.assert_called_once()
             assert mock_write.call_args_list[0][0][1] == Path("tests/animation/examples")
+
+
+def test_dry_arg(runner: CliRunner):
+    with patch("pathlib.Path.mkdir", new=MagicMock()) as mock_mkdir:
+        with patch("mcanitexgen.cli.write_mcmeta_files", new=MagicMock()) as mock_write:
+            runner.invoke(
+                cli.app, f"generate tests/animation/examples/steve.animation.py --dry"
+            )
+
+            mock_mkdir.assert_not_called()
+            mock_write.assert_not_called()
