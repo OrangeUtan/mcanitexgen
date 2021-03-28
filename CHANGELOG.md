@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v1.1.0 (2021-03-28)
+### Feature
+* Replace --no-indent flag with --minify and --indent ([`39d38ce`](https://github.com/OrangeUtan/mcanitexgen/commit/39d38ce693a832382ec776d5c1a437a4f0035128))
+
 
 ## v1.0.5 (2021-03-28)
 ### Fix
