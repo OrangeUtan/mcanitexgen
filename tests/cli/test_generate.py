@@ -33,7 +33,7 @@ class Test_file_arg:
         assert "is a directory" in result.output
 
 
-class Test_out_arg:
+class Test_out_option:
     @pytest.mark.parametrize(
         "out, expected_out",
         [
@@ -58,7 +58,7 @@ class Test_out_arg:
             assert mock_write.call_args_list[0][0][1] == Path("tests/animation/examples")
 
 
-def test_dry_arg(runner: CliRunner):
+def test_dry_flag(runner: CliRunner):
     with patch("pathlib.Path.mkdir", new=MagicMock()) as mock_mkdir:
         with patch("mcanitexgen.cli.write_mcmeta_files", new=MagicMock()) as mock_write:
             runner.invoke(
@@ -67,3 +67,38 @@ def test_dry_arg(runner: CliRunner):
 
             mock_mkdir.assert_not_called()
             mock_write.assert_not_called()
+
+
+class Test_minify_flag:
+    def test_set(self, runner: CliRunner):
+        with patch("pathlib.Path.mkdir", new=MagicMock()) as mock_mkdir:
+            with patch("mcanitexgen.cli.write_mcmeta_files", new=MagicMock()) as mock_write:
+                runner.invoke(
+                    cli.app, f"generate tests/animation/examples/steve.animation.py --minify"
+                )
+
+                mock_write.assert_called_once()
+                assert mock_write.call_args_list[0][0][2] == None
+
+    def test_not_set(self, runner: CliRunner):
+        with patch("pathlib.Path.mkdir", new=MagicMock()) as mock_mkdir:
+            with patch("mcanitexgen.cli.write_mcmeta_files", new=MagicMock()) as mock_write:
+                runner.invoke(cli.app, f"generate tests/animation/examples/steve.animation.py")
+
+                mock_write.assert_called_once()
+                assert mock_write.call_args_list[0][0][2] != None
+                assert isinstance(mock_write.call_args_list[0][0][2], str)
+
+
+class Test_indent_option:
+    @pytest.mark.parametrize("indent", ["\t", "    ", ""])
+    def test(self, indent, runner: CliRunner):
+        with patch("pathlib.Path.mkdir", new=MagicMock()) as mock_mkdir:
+            with patch("mcanitexgen.cli.write_mcmeta_files", new=MagicMock()) as mock_write:
+                runner.invoke(
+                    cli.app,
+                    f"generate tests/animation/examples/steve.animation.py --indent '{indent}'",
+                )
+
+                mock_write.assert_called_once()
+                assert mock_write.call_args_list[0][0][2] == indent

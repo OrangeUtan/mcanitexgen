@@ -39,8 +39,11 @@ def generate(
         file_okay=False,
         writable=True,
     ),
-    no_indent: int = typer.Option(
-        False, help="Pretty print json with indentation", is_flag=True, flag_value=True
+    minify: bool = typer.Option(
+        False, "--minify", "-m", is_flag=True, flag_value=True, help="Minify generated files"
+    ),
+    indent: str = typer.Option(
+        "\t", "--indent", "-i", help="Indentation used when generating files"
     ),
     dry: bool = typer.Option(
         False, "--dry", help="Dry run. Don't generate any files", is_flag=True
@@ -51,7 +54,7 @@ def generate(
 
     if not dry:
         out.mkdir(parents=True, exist_ok=True)
-        write_mcmeta_files(texture_animations, out, indent=None if no_indent else 2)
+        write_mcmeta_files(texture_animations, out, indent if not minify else None)
 
 
 @app.command(help="Create gifs for all animations in an animation file")
