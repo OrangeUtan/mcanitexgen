@@ -2,6 +2,11 @@
 
 <!--next-version-placeholder-->
 
+## v1.2.0 (2021-03-28)
+### Feature
+* Can now take files or directories as input ([`fbea8e7`](https://github.com/OrangeUtan/mcanitexgen/commit/fbea8e7c8dac15e9af7c86056611c610cced89e2))
+* Add beet plugin integration ([`63ef8a9`](https://github.com/OrangeUtan/mcanitexgen/commit/63ef8a992f6754f9fc9c6c5aa8c47cc4a3023e95))
+
 ## v1.1.0 (2021-03-28)
 ### Feature
 * Replace --no-indent flag with --minify and --indent ([`1a4dd2f`](https://github.com/OrangeUtan/mcanitexgen/commit/1a4dd2f2c5caf097d3545e91366d4f370f882480))
