@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v1.2.1 (2021-03-29)
+### Fix
+* Incorrect imports in beet plugin ([`e2ed77b`](https://github.com/OrangeUtan/mcanitexgen/commit/e2ed77b5b49d7b22365f751ecbfd16ba265c8677))
+
 ## v1.2.0 (2021-03-28)
 ### Feature
 * Can now take files or directories as input ([`fbea8e7`](https://github.com/OrangeUtan/mcanitexgen/commit/fbea8e7c8dac15e9af7c86056611c610cced89e2))
