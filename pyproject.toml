@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mcanitexgen"
-version = "1.2.1"
+version = "1.2.2"
 description = "An animation generator for Minecraft .mcmeta files"
 authors = ["Oran9eUtan <oran9eutan@gmail.com>"]
 license = "MIT"
