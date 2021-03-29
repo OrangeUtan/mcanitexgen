@@ -76,7 +76,7 @@ class Steve(TextureAnimation):
     WINK_RIGHT(duration=30),
   )
 ```
-An overview over all out files:
+Files overview:
 ```
 resourcepack
   ⠇

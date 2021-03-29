@@ -1,8 +1,6 @@
 from typing import Iterable
 
-from beet import Context
-from beet.library.resource_pack import Language, TextureMcmeta
-from beet.toolchain.context import Plugin
+from beet import Context, TextureMcmeta
 
 import mcanitexgen
 
