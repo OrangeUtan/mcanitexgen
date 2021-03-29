@@ -1,7 +1,7 @@
 from mcanitexgen.animation import Sequence, State, TextureAnimation, animation
 
 
-@animation("example.png")
+@animation("../example1.png")
 class Example1(TextureAnimation):
     A = State(0)
     B = State(1)

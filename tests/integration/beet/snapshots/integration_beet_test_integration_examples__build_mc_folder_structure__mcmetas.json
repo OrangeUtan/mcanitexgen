@@ -1,50 +1,46 @@
-[
-  {
-    "minecraft:Example1": {
-      "animation": {
-        "interpolate": false,
-        "frametime": 1,
-        "frames": [
-          {
-            "index": 0,
-            "time": 1
-          },
-          {
-            "index": 1,
-            "time": 1
-          },
-          {
-            "index": 0,
-            "time": 1
-          }
-        ]
-      }
+{
+  "minecraft:resourcepack/assets/minecraft/textures/example1": {
+    "animation": {
+      "interpolate": false,
+      "frametime": 1,
+      "frames": [
+        {
+          "index": 0,
+          "time": 1
+        },
+        {
+          "index": 1,
+          "time": 1
+        },
+        {
+          "index": 0,
+          "time": 1
+        }
+      ]
     }
   },
-  {
-    "minecraft:Example2": {
-      "animation": {
-        "interpolate": false,
-        "frametime": 1,
-        "frames": [
-          {
-            "index": 0,
-            "time": 1
-          },
-          {
-            "index": 1,
-            "time": 1
-          },
-          {
-            "index": 2,
-            "time": 1
-          },
-          {
-            "index": 3,
-            "time": 1
-          }
-        ]
-      }
+  "minecraft:resourcepack/assets/minecraft/textures/item/example2": {
+    "animation": {
+      "interpolate": false,
+      "frametime": 1,
+      "frames": [
+        {
+          "index": 0,
+          "time": 1
+        },
+        {
+          "index": 1,
+          "time": 1
+        },
+        {
+          "index": 2,
+          "time": 1
+        },
+        {
+          "index": 3,
+          "time": 1
+        }
+      ]
     }
   }
-]
+}
