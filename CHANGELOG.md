@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v1.2.3 (2021-04-07)
+### Fix
+* Generate .mcmeta files in correct location ([`366dad8`](https://github.com/OrangeUtan/mcanitexgen/commit/366dad8500221d6b5c9cdc92bf30607352dd1dc1))
+
 ## v1.2.2 (2021-03-29)
 ### Fix
 * Beet plugin creating correct output path for .mcmeta files ([`ed17fa1`](https://github.com/OrangeUtan/mcanitexgen/commit/ed17fa196958665f61f274fcd63714d2ad44dcf5))
