@@ -122,3 +122,80 @@ resourcepack
        ├╴ steve.animation.py
        └╴ steve.png.mcmeta
 ```
+
+# Beet integration
+Mcanitexgen can be used as a [`beet`](https://github.com/mcbeet/beet) plugin.
+Here is an example beet project using mcanitexgen:
+
+```
+beet.json
+resourcepack
+  └╴assets
+    └╴minecraft
+      └╴textures
+        └╴item
+          ├╴stone_sword.png
+          └╴swords.animation.py
+```
+**swords.animation.﻿py**
+```python
+from mcanitexgen.animation import animation, TextureAnimation, State, Sequence
+
+@animation("minecraft:item/stone_sword.png")
+class StoneSword(TextureAnimation):
+  IDLE1 = State(0)
+  IDLE2 = State(1)
+  IDLE3 = State(2)
+
+  idle = Sequence(
+    IDLE1(weight=1),
+    IDLE2(weight=1),
+    IDLE3(weight=1)
+  )
+
+  main = Sequence(
+    idle(duration=100)
+  )
+```
+
+**beet.json**
+```json
+{
+  "output": "build",
+  "resource_pack": {
+    "load": ["resourcepack"]
+  },
+  "pipeline": [
+      "mcanitexgen.integration.beet"
+  ],
+  "meta": {
+      "mcanitexgen": {
+        "load": ["resourcepack/**/*.animation.py"]
+      }
+  }
+}
+```
+Running `beet build` generates the .mcmeta file:
+```
+beet.json
+resourcepack
+  └╴...
+build
+  └╴assets
+    └╴minecraft
+      └╴textures
+        └╴item
+          ├╴stone_sword.png
+          └╴stone_sword.png.mcmeta
+```
+
+# Contributing
+Contributions are welcome. Make sure to first open an issue discussing the problem or the new feature before creating a pull request. The project uses [`poetry`](https://python-poetry.org/). Setup dev environment with [`invoke`](http://www.pyinvoke.org/):
+```shell
+$ invoke install
+```
+Run tests:
+```shell
+$ invoke test
+```
+The project follows [`black`](https://github.com/psf/black) codestyle. Import statements are sorted with [`isort`](https://pycqa.github.io/isort/). Code formatting and type checking is enforced using [`pre-commit`](https://pre-commit.com/)
