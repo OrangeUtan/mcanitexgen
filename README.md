@@ -19,6 +19,8 @@ It allows you to write texture animations in Python instead of json. Using a pro
 - [Getting started](#Getting-started)
   - [Create a simple animation](#Create-a-simple-animation)
   - [More examples](https://github.com/OrangeUtan/mcanitexgen/tree/main/examples)
+- [Beet integration](#Beet-integration)
+- [Contributing](#Contributing)
 - [Changelog](https://github.com/OrangeUtan/mcanitexgen/blob/main/CHANGELOG.md)
 
 # Installation
